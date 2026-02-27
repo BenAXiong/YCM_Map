@@ -1,0 +1,16 @@
+CORE
+research feasibility of li & cun implementation
+compare pdf with json (lanyu, bei amis, 東排灣語??? bug)
+DB
+add a md file to display the language/dialects tree
+add stats file compiling programmatically
+    - number of dialects per language
+    - number of each level of administrative division per lang/dia
+UI
+fix filters and options positions on mobile
+fix filters and options positions on PC
+add "about" overlay
+EXTRA
+tooltips: (show more) collect population info on the web (add sources)
+features: "Hi!" = how to say hello, thanks and drink! in each language
+famous people

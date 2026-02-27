@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// import TaiwanMap from "./components/TaiwanMap.legacy";
 import TaiwanMap from './components/TaiwanMap';
 
 export default function App() {

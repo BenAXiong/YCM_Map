@@ -1,20 +1,28 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img width="800" alt="Taiwan Yincumin Map" src="./screenshot.png" />
 </div>
 
-# Run and deploy your AI Studio app
+# Taiwan Yincumin Map (臺灣族語分佈地圖)
 
-This contains everything you need to run your app locally.
+An interactive map application showcasing the geographical distribution of Taiwan's indigenous languages and dialects. 
 
-View your app in AI Studio: https://ai.studio/apps/93cb710d-322c-4b89-bdd4-b5c8eb247629
+## Features
+
+- **Interactive Map**: Built with React, D3.js and TopoJSON.
+- **Language Filtering**: Explore and highlight specific languages and dialects.
+- **Search**: Quickly find specific towns and their corresponding languages.
+- **Detailed Tooltips**: Hover over regions to see which dialects are spoken there.
+- **Customizable UI**: Toggle county/township borders and floating or fixed info panels.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```

@@ -3,17 +3,14 @@ import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { motion, AnimatePresence } from 'motion/react';
 import { Filter, Info, Map as MapIcon, ChevronRight, ChevronDown, Check, X, Search, Settings } from 'lucide-react';
-import languagesData from '../data/languages.json';
+import areaIndexData from '../data/原住民16族42方言分佈參考.area_index.json';
 
-interface LanguageDistribution {
-  族語: string;
-  方言別: string;
-  分佈: {
-    縣: string;
-    鄉鎮市: string;
-    村里: string[];
-  }[];
-}
+type AreaIndexEntry = { 族語: string; 方言別: string };
+
+type AreaIndexJson = {
+  schema: string;
+  index: Record<string, Record<string, AreaIndexEntry[]>>;
+};
 
 const TaiwanMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -91,30 +88,36 @@ const TaiwanMap: React.FC = () => {
 
   // Group languages and dialects
   const languageGroups = useMemo<Record<string, string[]>>(() => {
-    const groups: Record<string, string[]> = {};
-    (languagesData as LanguageDistribution[]).forEach((item) => {
-      if (!groups[item.族語]) {
-        groups[item.族語] = [];
+    const groups: Record<string, Set<string>> = {};
+    const data = areaIndexData as unknown as AreaIndexJson;
+
+    for (const towns of Object.values(data.index)) {
+      for (const entries of Object.values(towns)) {
+        for (const e of entries) {
+          groups[e.族語] ??= new Set<string>();
+          groups[e.族語].add(e.方言別);
+        }
       }
-      groups[item.族語].push(item.方言別);
-    });
-    return groups;
+    }
+
+    // convert Set -> array
+    return Object.fromEntries(
+      Object.entries(groups).map(([lang, set]) => [lang, Array.from(set)])
+    );
   }, []);
 
   // Map township to languages
   const townToLanguages = useMemo<Record<string, Set<string>>>(() => {
     const map: Record<string, Set<string>> = {};
-    (languagesData as LanguageDistribution[]).forEach((item) => {
-      item.分佈.forEach((dist) => {
-        const county = dist.縣.trim();
-        const town = dist.鄉鎮市.trim();
-        const key = `${county}${town}`;
-        if (!map[key]) {
-          map[key] = new Set<string>();
-        }
-        map[key].add(item.方言別);
-      });
-    });
+    const data = areaIndexData as unknown as AreaIndexJson;
+
+    for (const [county, towns] of Object.entries(data.index)) {
+      for (const [town, entries] of Object.entries(towns)) {
+        const key = `${county.trim()}${town.trim()}`;
+        map[key] ??= new Set<string>();
+        entries.forEach((e) => map[key].add(e.方言別));
+      }
+    }
     return map;
   }, []);
 
@@ -594,8 +597,8 @@ const TaiwanMap: React.FC = () => {
                   {(() => {
                     const county = hoveredTown.COUNTYNAME || hoveredTown.countyName || hoveredTown.C_Name || '';
                     const town = hoveredTown.TOWNNAME || hoveredTown.townName || hoveredTown.T_Name || '';
-                    const key = `${county}${town}`;
-                    const dialects = townToLanguages[key];
+                    const normalize = (s: string) => s.replace("台", "臺").trim();
+                    const key = `${normalize(county)}${normalize(town)}`; const dialects = townToLanguages[key];
                     return dialects ? (
                       Array.from<string>(dialects).map((d: string) => (
                         <span
