@@ -1,0 +1,5 @@
+{
+  "name": "臺灣族語分佈地圖",
+  "description": "互動式臺灣地圖，展示各原住民族語及方言的地理分佈，包含行政區域詳細資訊與篩選功能。",
+  "requestFramePermissions": []
+}
