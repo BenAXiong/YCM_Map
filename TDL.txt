@@ -3,17 +3,23 @@ research feasibility of li & cun implementation
 implement li/cun display on zoom
 compare pdf with json (lanyu, bei amis, 東排灣語??? bug)
 review coloring logic - rainbow*16 + brightness
+pair/triplets in json match with any topojson or not -- list
 DB
 add a md file to display the language/dialects tree
 add stats file compiling programmatically
     - number of dialects per language
     - number of each level of administrative division per lang/dia
 UI
+Android & iPhone app icon
 fix filters and options positions on mobile
 fix filters and options positions on PC
 add "about" overlay
 display area names (li/cun on zoom)
 EXTRA
 tooltips: (show more) collect population info on the web (add sources)
-features: "Hi!" = how to say hello, thanks and drink! in each language
+features: "Hi!" = how to say hello, thanks and drink! in each language (url klokah)
 famous people
+one modern song
+one geyao
+
+復興區

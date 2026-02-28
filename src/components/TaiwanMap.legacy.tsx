@@ -1,63 +1,89 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { motion, AnimatePresence } from 'motion/react';
-import { Filter, Info, Map as MapIcon, ChevronRight, ChevronDown, Check, X, Search, Settings } from 'lucide-react';
-import languagesData from '../data/languages.json';
+import { Filter, Map as MapIcon, ChevronRight, ChevronDown, Check, X, Search, Settings } from 'lucide-react';
+import bundle from '../data/原住民16族42方言分佈參考.bundle.json';
 
-interface LanguageDistribution {
-    族語: string;
-    方言別: string;
-    分佈: {
-        縣: string;
-        鄉鎮市: string;
-        村里: string[];
-    }[];
-}
+type DialectEntry = { 族語: string; 方言別: string };
+
+type Bundle = {
+    schema: string;
+    generatedAt?: string;
+    areaIndex: Record<string, Record<string, DialectEntry[]>>;
+    languageGroups: Record<string, string[]>;
+    allDialects?: string[];
+    allLanguages?: string[];
+    stats?: any;
+};
 
 const TaiwanMap: React.FC = () => {
     const svgRef = useRef<SVGSVGElement>(null);
-    const gRef = useRef<SVGGElement>(null);
+    const gTownshipsRef = useRef<SVGGElement | null>(null);
+    const gBordersRef = useRef<SVGGElement | null>(null);
+
     const [geoData, setGeoData] = useState<any>(null);
-    const [hoveredTown, setHoveredTown] = useState<any>(null);
+    const [countyBorders, setCountyBorders] = useState<any>(null);
+
+    const [hoveredTownProps, setHoveredTownProps] = useState<any>(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
     const [selectedDialects, setSelectedDialects] = useState<Set<string>>(new Set());
+
     const [isFilterOpen, setIsFilterOpen] = useState(window.innerWidth > 768);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
+
     const [showCountyBorders, setShowCountyBorders] = useState(true);
-    const [countyBorders, setCountyBorders] = useState<any>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showFixedInfo, setShowFixedInfo] = useState(false);
     const [showTownshipContours, setShowTownshipContours] = useState(false);
     const contourRef = useRef(false);
 
-    useEffect(() => {
-        d3.select('.county-border').attr('display', showCountyBorders ? 'block' : 'none');
-    }, [showCountyBorders]);
+    const data = bundle as unknown as Bundle;
 
-    useEffect(() => {
-        contourRef.current = showTownshipContours;
-        const strokeColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
-        const strokeWidth = showTownshipContours ? 0.5 : 0.3;
-        d3.selectAll('.township').each(function () {
-            const selection = d3.select(this);
-            if (selection.attr('stroke') !== '#000000') {
-                selection.attr('stroke', strokeColor).attr('stroke-width', strokeWidth);
-            }
-        });
-    }, [showTownshipContours]);
+    // ---------- Normalization + lookups (bundle-only) ----------
+    const norm = (s: string) =>
+        (s ?? '')
+            .trim()
+            .replace(/\s+/g, '')
+            .replace('台', '臺'); // minimal but effective
 
-    // List of all townships for search
+    const getCountyTownFromProps = (p: any) => {
+        const county = p?.COUNTYNAME || p?.countyName || p?.C_Name || '';
+        const town = p?.TOWNNAME || p?.townName || p?.T_Name || '';
+        return { county, town };
+    };
+
+    const getEntries = (county: string, town: string): DialectEntry[] => {
+        const c = norm(county);
+        const t = norm(town);
+        return data.areaIndex?.[c]?.[t] ?? [];
+    };
+
+    const getDialects = (county: string, town: string): string[] => {
+        const entries = getEntries(county, town);
+        return Array.from(new Set(entries.map((e) => e.方言別)));
+    };
+
+    const languageGroups = data.languageGroups ?? {};
+    const allDialectsFromBundle =
+        data.allDialects ?? Array.from(new Set(Object.values(languageGroups).flat()));
+
+    // ---------- Search (from topojson features) ----------
     const allTownships = useMemo(() => {
         if (!geoData) return [];
-        return (geoData as any).features.map((f: any) => ({
-            id: f.properties.TOWNID || f.properties.townId || f.properties.T_Code || Math.random().toString(),
-            county: f.properties.COUNTYNAME || f.properties.countyName || f.properties.C_Name || '',
-            town: f.properties.TOWNNAME || f.properties.townName || f.properties.T_Name || '',
-            properties: f.properties
-        }));
+        return (geoData as any).features.map((f: any) => {
+            const p = f.properties || {};
+            const { county, town } = getCountyTownFromProps(p);
+            return {
+                id: p.TOWNID || p.townId || p.T_Code || `${county}-${town}-${Math.random().toString(16).slice(2)}`,
+                county,
+                town,
+                properties: p,
+            };
+        });
     }, [geoData]);
 
     useEffect(() => {
@@ -65,23 +91,19 @@ const TaiwanMap: React.FC = () => {
             setSearchResults([]);
             return;
         }
-        const filtered = allTownships.filter((t: any) =>
-            t.county.includes(searchTerm) || t.town.includes(searchTerm)
-        ).slice(0, 10);
+        const term = searchTerm.trim();
+        const filtered = allTownships
+            .filter((t: any) => t.county.includes(term) || t.town.includes(term))
+            .slice(0, 10);
         setSearchResults(filtered);
     }, [searchTerm, allTownships]);
 
     const handleTownshipSelect = (township: any) => {
-        const county = township.county;
-        const town = township.town;
-        const key = `${county}${town}`;
-        const dialects = townToLanguages[key];
-
-        if (dialects) {
-            setSelectedDialects((prev: Set<string>) => {
+        const dialects = getDialects(township.county, township.town);
+        if (dialects.length) {
+            setSelectedDialects((prev) => {
                 const next = new Set(prev);
-                const dialectsArray = Array.from(dialects);
-                dialectsArray.forEach(dialect => next.add(dialect));
+                dialects.forEach((d) => next.add(d));
                 return next;
             });
         }
@@ -89,101 +111,124 @@ const TaiwanMap: React.FC = () => {
         setSearchResults([]);
     };
 
-    // Group languages and dialects
-    const languageGroups = useMemo<Record<string, string[]>>(() => {
-        const groups: Record<string, string[]> = {};
-        (languagesData as LanguageDistribution[]).forEach((item) => {
-            if (!groups[item.族語]) {
-                groups[item.族語] = [];
-            }
-            groups[item.族語].push(item.方言別);
-        });
-        return groups;
-    }, []);
-
-    // Map township to languages
-    const townToLanguages = useMemo<Record<string, Set<string>>>(() => {
-        const map: Record<string, Set<string>> = {};
-        (languagesData as LanguageDistribution[]).forEach((item) => {
-            item.分佈.forEach((dist) => {
-                const county = dist.縣.trim();
-                const town = dist.鄉鎮市.trim();
-                const key = `${county}${town}`;
-                if (!map[key]) {
-                    map[key] = new Set<string>();
-                }
-                map[key].add(item.方言別);
-            });
-        });
-        return map;
-    }, []);
-
+    // ---------- Map data loading ----------
     useEffect(() => {
         const url = 'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json';
+
         fetch(url)
             .then((res) => {
                 if (!res.ok) throw new Error('Network response was not ok');
                 return res.json();
             })
-            .then((data) => {
-                const objectName = Object.keys(data.objects)[0];
-                const features = topojson.feature(data, data.objects[objectName] as any);
+            .then((topo) => {
+                const objectName = Object.keys(topo.objects)[0];
+                const features = topojson.feature(topo, topo.objects[objectName] as any);
                 setGeoData(features);
 
-                // Generate county borders mesh
-                const mesh = topojson.mesh(data, data.objects[objectName] as any, (a: any, b: any) => {
-                    const aCounty = a.properties.COUNTYNAME || a.properties.countyName || a.properties.C_Name;
-                    const bCounty = b.properties.COUNTYNAME || b.properties.countyName || b.properties.C_Name;
+                const mesh = topojson.mesh(topo, topo.objects[objectName] as any, (a: any, b: any) => {
+                    const aCounty = a.properties?.COUNTYNAME || a.properties?.countyName || a.properties?.C_Name;
+                    const bCounty = b.properties?.COUNTYNAME || b.properties?.countyName || b.properties?.C_Name;
                     return aCounty !== bCounty;
                 });
                 setCountyBorders(mesh);
             })
             .catch((err) => {
                 console.error('Error loading TopoJSON:', err);
-                fetch('https://raw.githubusercontent.com/g0v/tw-stats/master/data/township.topo.json')
-                    .then(res => res.json())
-                    .then(data => {
-                        const objectName = Object.keys(data.objects)[0];
-                        const features = topojson.feature(data, data.objects[objectName] as any);
-                        setGeoData(features);
-
-                        const mesh = topojson.mesh(data, data.objects[objectName] as any, (a: any, b: any) => {
-                            const aCounty = a.properties.COUNTYNAME || a.properties.countyName || a.properties.C_Name;
-                            const bCounty = b.properties.COUNTYNAME || b.properties.countyName || b.properties.C_Name;
-                            return aCounty !== bCounty;
-                        });
-                        setCountyBorders(mesh);
-                    })
-                    .catch(e => console.error('Fallback failed:', e));
             });
     }, []);
 
-    // Initial Map Render
+    // ---------- D3 render ----------
+    const getDialectColor = (dialect: string) => {
+        const colors = [
+            '#3b82f6',
+            '#ef4444',
+            '#10b981',
+            '#f59e0b',
+            '#8b5cf6',
+            '#ec4899',
+            '#06b6d4',
+            '#84cc16',
+            '#f97316',
+            '#6366f1',
+        ];
+        let hash = 0;
+        for (let i = 0; i < dialect.length; i++) {
+            hash = dialect.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    };
+
+    const updateColors = () => {
+        if (!gTownshipsRef.current) return;
+
+        d3.select(gTownshipsRef.current)
+            .selectAll<SVGPathElement, any>('.township')
+            .attr('fill', (d: any) => {
+                const p = d.properties || {};
+                const { county, town } = getCountyTownFromProps(p);
+                const dialectsArray = getDialects(county, town);
+                if (!dialectsArray.length) return '#f3f4f6';
+
+                const selectedHere = dialectsArray.filter((d) => selectedDialects.has(d));
+                if (selectedHere.length > 0) return getDialectColor(selectedHere[0]);
+
+                return '#f3f4f6';
+            });
+    };
+
+    // re-color whenever selection changes
+    useEffect(() => {
+        updateColors();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDialects]);
+
+    // toggle county border display
+    useEffect(() => {
+        d3.select('.county-border').attr('display', showCountyBorders ? 'block' : 'none');
+    }, [showCountyBorders]);
+
+    // toggle township contours
+    useEffect(() => {
+        contourRef.current = showTownshipContours;
+        const strokeColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
+        const strokeWidth = showTownshipContours ? 0.5 : 0.3;
+
+        d3.selectAll('.township').each(function () {
+            const sel = d3.select(this);
+            // keep hovered stroke black when active
+            if (sel.attr('stroke') !== '#000000') {
+                sel.attr('stroke', strokeColor).attr('stroke-width', strokeWidth);
+            }
+        });
+    }, [showTownshipContours]);
+
+    // initial render / re-render when topo or borders changes
     useEffect(() => {
         if (!geoData || !svgRef.current) return;
 
         const svg = d3.select(svgRef.current);
-        const width = svgRef.current.clientWidth;
-        const height = svgRef.current.clientHeight;
+        const width = svgRef.current.clientWidth || window.innerWidth;
+        const height = svgRef.current.clientHeight || window.innerHeight;
         const isMobile = width < 768;
 
         svg.selectAll('*').remove();
 
-        const projection = d3.geoMercator()
-            .center([120.9, 23.7]) // Slightly adjusted center for Taiwan
+        const projection = d3
+            .geoMercator()
+            .center([120.9, 23.7])
             .scale(isMobile ? width * 10 : width * 12)
             .translate([width / 2, height / 2]);
 
         const path = d3.geoPath().projection(projection);
 
-        // Create separate groups for townships and borders to prevent overlap issues
         const gTownships = svg.append('g').attr('class', 'townships-group');
         const gBorders = svg.append('g').attr('class', 'borders-group');
+        gTownshipsRef.current = gTownships.node();
+        gBordersRef.current = gBorders.node();
 
-        (gRef as any).current = gTownships.node();
-
-        // Draw townships
-        gTownships.selectAll('path')
+        // draw townships
+        gTownships
+            .selectAll('path')
             .data((geoData as any).features)
             .enter()
             .append('path')
@@ -193,164 +238,111 @@ const TaiwanMap: React.FC = () => {
             .attr('stroke', contourRef.current ? '#cbd5e1' : '#ffffff')
             .attr('stroke-width', contourRef.current ? 0.5 : 0.3)
             .style('cursor', 'pointer')
-            .on('mouseenter', (event, d: any) => {
-                setHoveredTown(d.properties);
+            .on('mouseenter', (event: any, d: any) => {
+                setHoveredTownProps(d.properties);
                 setTooltipPos({ x: event.clientX, y: event.clientY });
-                d3.select(event.currentTarget)
-                    .attr('stroke', '#000000')
-                    .attr('stroke-width', 1)
-                    .raise();
+                d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 1).raise();
             })
-            .on('mousemove', (event) => {
+            .on('mousemove', (event: any) => {
                 setTooltipPos({ x: event.clientX, y: event.clientY });
             })
-            .on('mouseleave', (event) => {
-                setHoveredTown(null);
+            .on('mouseleave', () => {
+                setHoveredTownProps(null);
                 const contour = contourRef.current;
                 d3.selectAll('.township')
                     .attr('stroke', contour ? '#cbd5e1' : '#ffffff')
                     .attr('stroke-width', contour ? 0.5 : 0.3);
             })
-            .on('click', (event, d: any) => {
-                const county = d.properties.COUNTYNAME || d.properties.countyName || d.properties.C_Name || '';
-                const town = d.properties.TOWNNAME || d.properties.townName || d.properties.T_Name || '';
-                const key = `${county}${town}`;
-                const dialects = townToLanguages[key];
+            .on('click', (_event: any, d: any) => {
+                const p = d.properties || {};
+                const { county, town } = getCountyTownFromProps(p);
+                const dialectsArray = getDialects(county, town);
+                if (!dialectsArray.length) return;
 
-                if (!dialects) return;
-
-                setSelectedDialects((prev: Set<string>) => {
+                setSelectedDialects((prev) => {
                     const next = new Set(prev);
-                    const dialectsArray = Array.from(dialects);
-                    const allPresent = dialectsArray.every(dialect => prev.has(dialect));
-
-                    if (allPresent) {
-                        dialectsArray.forEach(dialect => next.delete(dialect));
-                    } else {
-                        dialectsArray.forEach(dialect => next.add(dialect));
-                    }
+                    const allPresent = dialectsArray.every((x) => prev.has(x));
+                    if (allPresent) dialectsArray.forEach((x) => next.delete(x));
+                    else dialectsArray.forEach((x) => next.add(x));
                     return next;
                 });
             });
 
-        // Add zoom
-        const zoom = d3.zoom()
+        // zoom
+        const zoom = d3
+            .zoom()
             .scaleExtent([1, 20])
-            .on('zoom', (event) => {
+            .on('zoom', (event: any) => {
                 gTownships.attr('transform', event.transform);
                 gBorders.attr('transform', event.transform);
             });
 
         svg.call(zoom as any);
 
-        // Draw county borders - always in the top group
+        // draw county borders
         if (countyBorders) {
-            gBorders.append('path')
+            gBorders
+                .append('path')
                 .datum(countyBorders)
                 .attr('d', path as any)
                 .attr('class', 'county-border')
                 .attr('fill', 'none')
-                .attr('stroke', '#94a3b8') // Slate 400
+                .attr('stroke', '#94a3b8')
                 .attr('stroke-width', 0.8)
                 .attr('pointer-events', 'none')
                 .attr('display', showCountyBorders ? 'block' : 'none');
         }
 
-        // Initial color update
+        // initial colors
         updateColors();
-
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [geoData, countyBorders]);
 
-    // Update colors when selectedDialects changes
-    const updateColors = () => {
-        if (!gRef.current) return;
-
-        d3.select(gRef.current)
-            .selectAll('.township')
-            .transition()
-            .duration(200)
-            .attr('fill', (d: any) => {
-                const county = d.properties.COUNTYNAME || d.properties.countyName || d.properties.C_Name || '';
-                const town = d.properties.TOWNNAME || d.properties.townName || d.properties.T_Name || '';
-                const key = `${county}${town}`;
-                const dialects = townToLanguages[key];
-
-                if (!dialects) return '#f3f4f6';
-
-                const dialectsArray = Array.from(dialects);
-                const selectedInTown = dialectsArray.filter(d => selectedDialects.has(d));
-
-                if (selectedInTown.length > 0) {
-                    return getDialectColor(selectedInTown[0] as string);
-                }
-
-                return '#f3f4f6';
-            });
-    };
-
-    useEffect(() => {
-        updateColors();
-    }, [selectedDialects, townToLanguages]);
-
-    const getDialectColor = (dialect: string) => {
-        const colors = [
-            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-        ];
-        // Simple hash for color
-        let hash = 0;
-        for (let i = 0; i < dialect.length; i++) {
-            hash = dialect.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        return colors[Math.abs(hash) % colors.length];
-    };
-
+    // ---------- Filter UI helpers ----------
     const toggleLanguage = (lang: string) => {
-        const newSelectedDialects = new Set(selectedDialects);
-        const dialects = languageGroups[lang];
+        const dialects = languageGroups[lang] ?? [];
+        const allSelected = dialects.length > 0 && dialects.every((d) => selectedDialects.has(d));
 
-        const allSelected = dialects.every(d => selectedDialects.has(d));
-
-        if (allSelected) {
-            dialects.forEach(d => newSelectedDialects.delete(d));
-        } else {
-            dialects.forEach(d => newSelectedDialects.add(d));
-        }
-
-        setSelectedDialects(newSelectedDialects);
+        setSelectedDialects((prev) => {
+            const next = new Set(prev);
+            if (allSelected) dialects.forEach((d) => next.delete(d));
+            else dialects.forEach((d) => next.add(d));
+            return next;
+        });
     };
 
     const toggleDialect = (dialect: string) => {
-        const newSelectedDialects = new Set(selectedDialects);
-        if (newSelectedDialects.has(dialect)) {
-            newSelectedDialects.delete(dialect);
-        } else {
-            newSelectedDialects.add(dialect);
-        }
-        setSelectedDialects(newSelectedDialects);
+        setSelectedDialects((prev) => {
+            const next = new Set(prev);
+            if (next.has(dialect)) next.delete(dialect);
+            else next.add(dialect);
+            return next;
+        });
     };
 
     const toggleGroup = (lang: string) => {
-        const newExpanded = new Set(expandedGroups);
-        if (newExpanded.has(lang)) {
-            newExpanded.delete(lang);
-        } else {
-            newExpanded.add(lang);
-        }
-        setExpandedGroups(newExpanded);
-    };
-
-    const selectAll = () => {
-        const allDialects = new Set<string>();
-        Object.values(languageGroups).forEach((dialects: string[]) => {
-            dialects.forEach(d => allDialects.add(d));
+        setExpandedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(lang)) next.delete(lang);
+            else next.add(lang);
+            return next;
         });
-        setSelectedDialects(allDialects);
     };
 
-    const clearAll = () => {
-        setSelectedDialects(new Set());
-    };
+    const selectAll = () => setSelectedDialects(new Set(allDialectsFromBundle));
+    const clearAll = () => setSelectedDialects(new Set());
+
+    // ---------- Tooltip rendering data ----------
+    const hoveredLabel = useMemo(() => {
+        if (!hoveredTownProps) return { county: '', town: '' };
+        return getCountyTownFromProps(hoveredTownProps);
+    }, [hoveredTownProps]);
+
+    const hoveredDialects = useMemo(() => {
+        if (!hoveredTownProps) return [];
+        return getDialects(hoveredLabel.county, hoveredLabel.town);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hoveredTownProps, hoveredLabel.county, hoveredLabel.town]);
 
     return (
         <div className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans">
@@ -370,9 +362,7 @@ const TaiwanMap: React.FC = () => {
                         onMouseEnter={() => setIsSettingsOpen(true)}
                         onMouseLeave={() => setIsSettingsOpen(false)}
                     >
-                        <button
-                            className="p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 transition-all text-stone-600 flex items-center gap-2"
-                        >
+                        <button className="p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 transition-all text-stone-600 flex items-center gap-2">
                             <Settings className={`w-5 h-5 ${isSettingsOpen ? 'rotate-90' : ''} transition-transform duration-300`} />
                             <span className="text-xs font-bold uppercase tracking-wider">地圖設定</span>
                         </button>
@@ -391,27 +381,41 @@ const TaiwanMap: React.FC = () => {
                                             <span className="text-sm text-stone-700 font-medium">顯示縣市邊界</span>
                                             <button
                                                 onClick={() => setShowCountyBorders(!showCountyBorders)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${showCountyBorders ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${showCountyBorders ? 'bg-emerald-500' : 'bg-stone-300'
+                                                    }`}
                                             >
-                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showCountyBorders ? 'left-6' : 'left-1'}`} />
+                                                <div
+                                                    className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showCountyBorders ? 'left-6' : 'left-1'
+                                                        }`}
+                                                />
                                             </button>
                                         </div>
+
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-stone-700 font-medium">固定資訊面板</span>
                                             <button
                                                 onClick={() => setShowFixedInfo(!showFixedInfo)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${showFixedInfo ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${showFixedInfo ? 'bg-emerald-500' : 'bg-stone-300'
+                                                    }`}
                                             >
-                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showFixedInfo ? 'left-6' : 'left-1'}`} />
+                                                <div
+                                                    className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showFixedInfo ? 'left-6' : 'left-1'
+                                                        }`}
+                                                />
                                             </button>
                                         </div>
+
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-stone-700 font-medium">顯示鄉鎮邊界</span>
                                             <button
                                                 onClick={() => setShowTownshipContours(!showTownshipContours)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${showTownshipContours ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${showTownshipContours ? 'bg-emerald-500' : 'bg-stone-300'
+                                                    }`}
                                             >
-                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showTownshipContours ? 'left-6' : 'left-1'}`} />
+                                                <div
+                                                    className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showTownshipContours ? 'left-6' : 'left-1'
+                                                        }`}
+                                                />
                                             </button>
                                         </div>
                                     </div>
@@ -440,10 +444,7 @@ const TaiwanMap: React.FC = () => {
                                     <Filter className="w-5 h-5" />
                                     語言篩選
                                 </h2>
-                                <button
-                                    onClick={() => setIsFilterOpen(false)}
-                                    className="p-2 hover:bg-stone-100 rounded-full transition-colors"
-                                >
+                                <button onClick={() => setIsFilterOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -501,17 +502,20 @@ const TaiwanMap: React.FC = () => {
                             <div className="space-y-2">
                                 {Object.entries(languageGroups).map(([lang, dialects]) => {
                                     const dialectsArray = dialects as string[];
-                                    const allSelected = dialectsArray.every(d => selectedDialects.has(d));
+                                    const allSelected = dialectsArray.length > 0 && dialectsArray.every((d) => selectedDialects.has(d));
 
                                     return (
                                         <div key={lang} className="border border-stone-100 rounded-xl overflow-hidden">
-                                            <div className="flex items-center justify-between p-3 bg-stone-50/50 hover:bg-stone-100 transition-colors cursor-pointer" onClick={() => toggleGroup(lang)}>
+                                            <div
+                                                className="flex items-center justify-between p-3 bg-stone-50/50 hover:bg-stone-100 transition-colors cursor-pointer"
+                                                onClick={() => toggleGroup(lang)}
+                                            >
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
                                                         className="w-5 h-5 rounded border flex items-center justify-center transition-colors"
                                                         style={{
                                                             backgroundColor: allSelected ? '#10b981' : 'transparent',
-                                                            borderColor: allSelected ? '#10b981' : '#d1d5db'
+                                                            borderColor: allSelected ? '#10b981' : '#d1d5db',
                                                         }}
                                                         onClick={(e: React.MouseEvent) => {
                                                             e.stopPropagation();
@@ -522,12 +526,16 @@ const TaiwanMap: React.FC = () => {
                                                     </div>
                                                     <span className="font-medium text-stone-800">{lang}</span>
                                                 </div>
-                                                {expandedGroups.has(lang) ? <ChevronDown className="w-4 h-4 text-stone-400" /> : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                                                {expandedGroups.has(lang) ? (
+                                                    <ChevronDown className="w-4 h-4 text-stone-400" />
+                                                ) : (
+                                                    <ChevronRight className="w-4 h-4 text-stone-400" />
+                                                )}
                                             </div>
 
                                             {expandedGroups.has(lang) && (
                                                 <div className="p-2 bg-white space-y-1">
-                                                    {dialectsArray.map(dialect => (
+                                                    {dialectsArray.map((dialect) => (
                                                         <div
                                                             key={dialect}
                                                             className="flex items-center gap-3 p-2 hover:bg-stone-50 rounded-lg cursor-pointer transition-colors"
@@ -537,7 +545,7 @@ const TaiwanMap: React.FC = () => {
                                                                 className="w-4 h-4 rounded border flex items-center justify-center transition-colors"
                                                                 style={{
                                                                     backgroundColor: selectedDialects.has(dialect) ? getDialectColor(dialect) : 'transparent',
-                                                                    borderColor: selectedDialects.has(dialect) ? getDialectColor(dialect) : '#d1d5db'
+                                                                    borderColor: selectedDialects.has(dialect) ? getDialectColor(dialect) : '#d1d5db',
                                                                 }}
                                                             >
                                                                 {selectedDialects.has(dialect) && <Check className="w-2 h-2 text-white" />}
@@ -568,7 +576,7 @@ const TaiwanMap: React.FC = () => {
 
             {/* Tooltip (Floating) */}
             <AnimatePresence>
-                {hoveredTown && !showFixedInfo && (
+                {hoveredTownProps && !showFixedInfo && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -576,40 +584,31 @@ const TaiwanMap: React.FC = () => {
                         style={{
                             left: tooltipPos.x + 20,
                             top: tooltipPos.y + 20,
-                            position: 'fixed'
+                            position: 'fixed',
                         }}
-                        className="z-50 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-stone-200 min-w-[200px]"
+                        className="z-50 pointer-events-none bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-stone-200 min-w-[200px]"
                     >
                         <h3 className="text-xl font-bold text-stone-900">
-                            {hoveredTown.COUNTYNAME || hoveredTown.countyName || hoveredTown.C_Name || ''} {hoveredTown.TOWNNAME || hoveredTown.townName || hoveredTown.T_Name || ''}
+                            {hoveredLabel.county} {hoveredLabel.town}
                         </h3>
+
                         <div className="mt-3 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-stone-500">估計人口</span>
-                                <span className="font-mono font-medium">---</span>
-                            </div>
                             <div className="border-t border-stone-100 pt-2">
                                 <span className="text-xs font-semibold text-stone-400 block mb-1">分佈族語</span>
                                 <div className="flex flex-wrap gap-1">
-                                    {(() => {
-                                        const county = hoveredTown.COUNTYNAME || hoveredTown.countyName || hoveredTown.C_Name || '';
-                                        const town = hoveredTown.TOWNNAME || hoveredTown.townName || hoveredTown.T_Name || '';
-                                        const key = `${county}${town}`;
-                                        const dialects = townToLanguages[key];
-                                        return dialects ? (
-                                            Array.from<string>(dialects).map((d: string) => (
-                                                <span
-                                                    key={d}
-                                                    className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white"
-                                                    style={{ backgroundColor: getDialectColor(d) }}
-                                                >
-                                                    {d}
-                                                </span>
-                                            ))
-                                        ) : (
-                                            <span className="text-xs text-stone-400 italic">無特定族語分佈數據</span>
-                                        );
-                                    })()}
+                                    {hoveredDialects.length > 0 ? (
+                                        hoveredDialects.map((d) => (
+                                            <span
+                                                key={d}
+                                                className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white"
+                                                style={{ backgroundColor: getDialectColor(d) }}
+                                            >
+                                                {d}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-xs text-stone-400 italic">無特定族語分佈數據</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -617,9 +616,9 @@ const TaiwanMap: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Fixed Info Panel (Replaces Legend) */}
+            {/* Fixed Info Panel */}
             <AnimatePresence>
-                {showFixedInfo && hoveredTown && (
+                {showFixedInfo && hoveredTownProps && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -627,35 +626,26 @@ const TaiwanMap: React.FC = () => {
                         className="absolute bottom-6 left-6 z-10 bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-xl border border-stone-200 w-72"
                     >
                         <h3 className="text-xl font-bold text-stone-900">
-                            {hoveredTown.COUNTYNAME || hoveredTown.countyName || hoveredTown.C_Name || ''} {hoveredTown.TOWNNAME || hoveredTown.townName || hoveredTown.T_Name || ''}
+                            {hoveredLabel.county} {hoveredLabel.town}
                         </h3>
+
                         <div className="mt-3 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-stone-500">估計人口</span>
-                                <span className="font-mono font-medium">---</span>
-                            </div>
                             <div className="border-t border-stone-100 pt-2">
                                 <span className="text-xs font-semibold text-stone-400 block mb-1">分佈族語</span>
                                 <div className="flex flex-wrap gap-1">
-                                    {(() => {
-                                        const county = hoveredTown.COUNTYNAME || hoveredTown.countyName || hoveredTown.C_Name || '';
-                                        const town = hoveredTown.TOWNNAME || hoveredTown.townName || hoveredTown.T_Name || '';
-                                        const key = `${county}${town}`;
-                                        const dialects = townToLanguages[key];
-                                        return dialects ? (
-                                            Array.from<string>(dialects).map((d: string) => (
-                                                <span
-                                                    key={d}
-                                                    className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white"
-                                                    style={{ backgroundColor: getDialectColor(d) }}
-                                                >
-                                                    {d}
-                                                </span>
-                                            ))
-                                        ) : (
-                                            <span className="text-xs text-stone-400 italic">無特定族語分佈數據</span>
-                                        );
-                                    })()}
+                                    {hoveredDialects.length > 0 ? (
+                                        hoveredDialects.map((d) => (
+                                            <span
+                                                key={d}
+                                                className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white"
+                                                style={{ backgroundColor: getDialectColor(d) }}
+                                            >
+                                                {d}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-xs text-stone-400 italic">無特定族語分佈數據</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
