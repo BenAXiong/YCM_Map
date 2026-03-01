@@ -26,7 +26,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    className="absolute bottom-6 left-6 z-10 bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-xl border border-stone-200 w-72"
+                    className="bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-xl border border-stone-200 w-72 pointer-events-auto"
                 >
                     <div className="flex flex-col">
                         {hoveredLabel.village && (

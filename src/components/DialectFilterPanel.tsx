@@ -12,6 +12,7 @@ type Props = {
     setExpandedGroups: React.Dispatch<React.SetStateAction<Set<string>>>;
 
     selectedDialects: Set<string>;
+    showFilterColors: boolean;
     onToggleLanguage: (lang: string) => void;
     onToggleDialect: (dialect: string) => void;
     onSelectAll: () => void;
@@ -35,6 +36,7 @@ const DialectFilterPanel: React.FC<Props> = ({
     expandedGroups,
     setExpandedGroups,
     selectedDialects,
+    showFilterColors,
     onToggleLanguage,
     onToggleDialect,
     onSelectAll,
@@ -64,8 +66,8 @@ const DialectFilterPanel: React.FC<Props> = ({
                         exit={{ x: 300, opacity: 0 }}
                         className="absolute top-0 right-0 h-full w-80 bg-white/90 backdrop-blur-xl border-l border-stone-200 shadow-2xl z-20 overflow-y-auto"
                     >
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-4">
+                        <div className="p-5">
+                            <div className="flex justify-between items-center mb-2">
                                 <h2 className="text-lg font-semibold flex items-center gap-2">
                                     <Filter className="w-5 h-5" />
                                     語言篩選
@@ -76,7 +78,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                             </div>
 
                             {/* Search */}
-                            <div className="relative mb-6">
+                            <div className="relative mb-3">
                                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                                     <Search className="w-4 h-4 text-stone-400" />
                                 </div>
@@ -112,7 +114,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                             </div>
 
                             {/* Buttons */}
-                            <div className="flex gap-2 mb-6">
+                            <div className="flex gap-2 mb-4">
                                 <button
                                     onClick={onSelectAll}
                                     className="flex-1 py-2 px-3 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
@@ -128,24 +130,29 @@ const DialectFilterPanel: React.FC<Props> = ({
                             </div>
 
                             {/* Groups */}
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 {Object.entries(languageGroups).map(([lang, dialects]) => {
                                     const dialectsArray = dialects as string[];
                                     const allSelected =
                                         dialectsArray.length > 0 && dialectsArray.every((d) => selectedDialects.has(d));
+                                    const someSelected =
+                                        !allSelected && dialectsArray.some((d) => selectedDialects.has(d));
 
                                     return (
                                         <div key={lang} className="border border-stone-100 rounded-xl">
                                             <div
-                                                className={`flex items-center justify-between p-3 bg-stone-50/50 hover:bg-stone-100 transition-colors cursor-pointer group/row ${expandedGroups.has(lang) ? 'rounded-t-xl' : 'rounded-xl'}`}
+                                                className={`flex items-center justify-between px-3 py-2.5 transition-colors cursor-pointer group/row ${expandedGroups.has(lang) ? 'rounded-t-xl' : 'rounded-xl'} ${!showFilterColors ? 'bg-stone-50/50 hover:bg-stone-100' : ''}`}
+                                                style={{
+                                                    backgroundColor: showFilterColors ? getDialectColor(lang).replace('hsl(', 'hsla(').replace(')', ', 0.15)') : undefined
+                                                }}
                                                 onClick={() => toggleGroup(lang)}
                                             >
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
                                                         className="w-5 h-5 rounded border flex shrink-0 items-center justify-center transition-colors"
                                                         style={{
-                                                            backgroundColor: allSelected ? '#10b981' : 'transparent',
-                                                            borderColor: allSelected ? '#10b981' : '#d1d5db',
+                                                            backgroundColor: allSelected ? '#10b981' : someSelected ? '#a8a29e' : 'transparent',
+                                                            borderColor: allSelected ? '#10b981' : someSelected ? '#a8a29e' : '#d1d5db',
                                                         }}
                                                         onClick={(e: React.MouseEvent) => {
                                                             e.stopPropagation();
@@ -153,6 +160,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                         }}
                                                     >
                                                         {allSelected && <Check className="w-3 h-3 text-white" />}
+                                                        {someSelected && <div className="w-2 h-0.5 bg-white rounded-full" />}
                                                     </div>
 
                                                     {/* Info Icon with Tooltip */}
@@ -164,7 +172,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                         </div>
                                                     </div>
 
-                                                    <span className="font-medium text-stone-800">{lang}</span>
+                                                    <span className="font-medium text-sm text-stone-800">{lang}</span>
                                                 </div>
 
                                                 {expandedGroups.has(lang) ? (
@@ -183,7 +191,10 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                         return (
                                                             <div
                                                                 key={dialect}
-                                                                className="flex items-center gap-3 p-2 hover:bg-stone-50 rounded-lg cursor-pointer transition-colors"
+                                                                className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${!showFilterColors ? 'hover:bg-stone-50' : ''}`}
+                                                                style={{
+                                                                    backgroundColor: showFilterColors ? color.replace('hsl(', 'hsla(').replace(')', ', 0.15)') : undefined
+                                                                }}
                                                                 onClick={() => onToggleDialect(dialect)}
                                                             >
                                                                 <div

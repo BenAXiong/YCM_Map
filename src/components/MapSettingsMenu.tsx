@@ -20,6 +20,9 @@ type Props = {
 
     showVillageColors: boolean;
     setShowVillageColors: (v: boolean) => void;
+
+    showFilterColors: boolean;
+    setShowFilterColors: (v: boolean) => void;
 };
 
 const MapSettingsMenu: React.FC<Props> = ({
@@ -35,6 +38,8 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowVillageBorders,
     showVillageColors,
     setShowVillageColors,
+    showFilterColors,
+    setShowFilterColors,
 }) => {
     return (
         <div
@@ -82,6 +87,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                 label="村里著色模式"
                                 value={showVillageColors}
                                 onToggle={() => setShowVillageColors(!showVillageColors)}
+                            />
+                            <ToggleRow
+                                label="篩選選項著色"
+                                value={showFilterColors}
+                                onToggle={() => setShowFilterColors(!showFilterColors)}
                             />
                         </div>
                     </motion.div>

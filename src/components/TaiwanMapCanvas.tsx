@@ -101,6 +101,15 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
         const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
 
+        // Some townships in the atlas use old names; map them to our bundle's names
+        const TOWN_ALIASES: Record<string, string> = {
+            '復興鄉': '復興區', // Taoyuan 桃園市 admin upgrade
+        };
+        const normTown = (t: string) => {
+            const n = norm(t);
+            return TOWN_ALIASES[n] ?? n;
+        };
+
         // Update fills when selectedDialects changes (no full re-render)
         useEffect(() => {
             const { getDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
@@ -129,10 +138,11 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('fill', (d: any) => {
                         const p = d.properties || {};
                         const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
-                        const t = norm(p.TOWNNAME || p.townName || p.T_Name || '');
+                        const t = normTown(p.TOWNNAME || p.townName || p.T_Name || '');
                         const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
                         const key = `${c}|${t}|${v}`;
-                        const dialectsArray = villageLookup[key] || [];
+                        const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
+                        const dialectsArray = villageLookup[key] || villageLookup[`${c}|${t}|${vFallback}`] || [];
 
                         if (!dialectsArray.length) return showVillageColors ? '#f3f4f6' : 'transparent';
                         const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
@@ -348,10 +358,11 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         const { selectedDialects } = stateRef.current;
                         const p = d.properties || {};
                         const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
-                        const t = norm(p.TOWNNAME || p.townName || p.T_Name || '');
+                        const t = normTown(p.TOWNNAME || p.townName || p.T_Name || '');
                         const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
                         const key = `${c}|${t}|${v}`;
-                        const dialectsArray = villageLookup[key] || [];
+                        const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
+                        const dialectsArray = villageLookup[key] || villageLookup[`${c}|${t}|${vFallback}`] || [];
 
                         if (!dialectsArray.length) return showVillageColors ? '#f3f4f6' : 'transparent';
                         const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));

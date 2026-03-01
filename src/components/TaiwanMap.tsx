@@ -11,6 +11,7 @@ import DialectFilterPanel from './DialectFilterPanel';
 import MapSettingsMenu from './MapSettingsMenu';
 import CursorTooltip from './CursorTooltip';
 import FixedInfoPanel from './FixedInfoPanel';
+import MapLegend from './MapLegend';
 
 const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
@@ -24,6 +25,7 @@ const TaiwanMap: React.FC = () => {
     SHOW_TOWNSHIP_CONTOURS: 'ycm_show_township_contours',
     SHOW_VILLAGE_BORDERS: 'ycm_show_village_borders',
     SHOW_VILLAGE_COLORS: 'ycm_show_village_colors',
+    SHOW_FILTER_COLORS: 'ycm_show_filter_colors',
     SHOW_FIXED_INFO: 'ycm_show_fixed_info',
   };
 
@@ -58,6 +60,10 @@ const TaiwanMap: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS);
     return saved !== null ? JSON.parse(saved) : false;
   });
+  const [showFilterColors, setShowFilterColors] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_FILTER_COLORS);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -79,6 +85,10 @@ const TaiwanMap: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS, JSON.stringify(showVillageColors));
   }, [showVillageColors]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_FILTER_COLORS, JSON.stringify(showFilterColors));
+  }, [showFilterColors]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
@@ -198,6 +208,8 @@ const TaiwanMap: React.FC = () => {
             setShowVillageBorders={setShowVillageBorders}
             showVillageColors={showVillageColors}
             setShowVillageColors={setShowVillageColors}
+            showFilterColors={showFilterColors}
+            setShowFilterColors={setShowFilterColors}
           />
         </div>
       </header>
@@ -222,8 +234,11 @@ const TaiwanMap: React.FC = () => {
         }}
         onLeave={() => setHoveredTown(null)}
         onClickTown={(props) => {
-          const { county, town } = getCountyTownVillageFromProps(props);
-          const dialectsArray = getDialects(county, town);
+          const { county, town, village } = getCountyTownVillageFromProps(props);
+          // In village mode, resolve dialects at village level; fall back to township
+          const dialectsArray = (showVillageColors && village)
+            ? getVillageDialects(county, town, village)
+            : getDialects(county, town);
           if (!dialectsArray.length) return;
 
           setSelectedDialects((prev) => {
@@ -255,6 +270,7 @@ const TaiwanMap: React.FC = () => {
         expandedGroups={expandedGroups}
         setExpandedGroups={setExpandedGroups}
         selectedDialects={selectedDialects}
+        showFilterColors={showFilterColors}
         onToggleLanguage={toggleLanguage}
         onToggleDialect={toggleDialect}
         onSelectAll={selectAll}
@@ -275,13 +291,20 @@ const TaiwanMap: React.FC = () => {
         getDialectColor={getDialectColor}
       />
 
-      <FixedInfoPanel
-        hoveredTown={hoveredTown}
-        showFixedInfo={showFixedInfo}
-        hoveredLabel={hoveredLabel}
-        hoveredDialects={hoveredDialects}
-        getDialectColor={getDialectColor}
-      />
+      <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-4 items-start">
+        <FixedInfoPanel
+          hoveredTown={hoveredTown}
+          showFixedInfo={showFixedInfo}
+          hoveredLabel={hoveredLabel}
+          hoveredDialects={hoveredDialects}
+          getDialectColor={getDialectColor}
+        />
+        <MapLegend
+          selectedDialects={selectedDialects}
+          languageGroups={languageGroups}
+          getDialectColor={getDialectColor}
+        />
+      </div>
     </div>
   );
 };

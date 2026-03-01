@@ -154,6 +154,18 @@ def split_aware_of_brackets(s: str, separators: List[str]) -> List[str]:
     return res
 
 
+def clean_name(s: str) -> str:
+    """Clean a string by stripping leading/trailing whitespace and internal spaces between CJK characters.
+    This fixes issues like '卡那卡那 富語' -> '卡那卡那富語'.
+    """
+    if not isinstance(s, str):
+        return str(s)
+    s = s.strip()
+    # collapse mid-word spaces (e.g. '卡那卡那 富語')
+    s = re.sub(r'([\u4e00-\u9fff])\s+([\u4e00-\u9fff])', r'\1\2', s)
+    return s
+
+
 def clean_village_name(v: str) -> str:
     """Clean a single village name token.
 
@@ -342,10 +354,10 @@ def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> tuple:
     all_non_admin: List[dict] = []
 
     for _, row in df.iterrows():
-        language = norm_text(row.get(colmap["language"]))
-        dialect = norm_text(row.get(colmap["dialect"]))
-        county = norm_text(row.get(colmap["county"]))
-        township = norm_text(row.get(colmap["township"]))
+        language = clean_name(row.get(colmap["language"]))
+        dialect = clean_name(row.get(colmap["dialect"]))
+        county = clean_name(row.get(colmap["county"]))
+        township = clean_name(row.get(colmap["township"]))
         village_raw = norm_text(row.get(colmap.get("village", ""))) if "village" in colmap else ""
 
         # skip empty rows

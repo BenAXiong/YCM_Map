@@ -27,6 +27,12 @@ const norm = (s: string) =>
         .replace(/\s+/g, '')
         .replace('台', '臺');
 
+// Some townships in the TopoJSON atlas still use old administrative names
+const TOWN_ALIASES: Record<string, string> = {
+    '復興鄉': '復興區', // Taoyuan 桃園市: upgraded from 鄉 to 區
+};
+const normTown = (t: string) => TOWN_ALIASES[norm(t)] ?? norm(t);
+
 const getCountyTownVillageFromProps = (p: any) => {
     const county = p?.COUNTYNAME || p?.countyName || p?.C_Name || '';
     const town = p?.TOWNNAME || p?.townName || p?.T_Name || '';
@@ -36,7 +42,7 @@ const getCountyTownVillageFromProps = (p: any) => {
 
 const getEntries = (county: string, town: string): DialectEntry[] => {
     const c = norm(county);
-    const t = norm(town);
+    const t = normTown(town);
     return data.areaIndex?.[c]?.[t] ?? [];
 };
 
@@ -47,10 +53,13 @@ const getDialects = (county: string, town: string): string[] => {
 
 const getVillageDialects = (county: string, town: string, village: string): string[] => {
     const c = norm(county);
-    const t = norm(town);
+    const t = normTown(town);
     const v = norm(village);
     const key = `${c}|${t}|${v}`;
-    return villageLookup[key] || [];
+    if (villageLookup[key]) return villageLookup[key];
+    // Fallback: municipalities use 里 but our source data uses 村
+    const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
+    return villageLookup[`${c}|${t}|${vFallback}`] || [];
 };
 
 export function useDialectData() {

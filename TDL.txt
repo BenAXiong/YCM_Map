@@ -1,15 +1,17 @@
 CORE
 mobile UI: hide title, filters from bottom, recenter...
-legend
-language toggle
-optimize loading
+PC UI: increase languages pills
 how to deal with overlaps?
+optimize loading
 clickmode: higlight all shared lang or others?
+
 UI
 Android & iPhone app icon
 add "about" overlay
+grey out no info areas
+filter avoid wiggle when scroll bar activates
+
 EXTRA
-relief
 
 PHRASEBOOK
 tooltips: (show more) collect population info on the web (add sources)
@@ -21,3 +23,5 @@ one geyao
 
 
 population data of each division (yes, even li/cun ifpossible).
+
+卡那卡那 富語 is present in too form, both with (erroneously) and without the space. where doe s the confusion stem from? please document it. my main gripe is that the space is displayed in the language filter UI

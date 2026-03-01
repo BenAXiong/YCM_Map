@@ -1,4 +1,13 @@
 import dialectsBundle from '../data/dialects.bundle.json';
+import languageStats from '../data/language_stats.json';
+
+const statsData = languageStats as { rankings: { tribe: string; population: number }[] };
+
+// 0. Compute ranked languages to map hues to the new sequence
+const rankedLanguages = statsData.rankings.map((r) => {
+    const lang = r.tribe.trim().replace(/族$/, '語');
+    return lang === '雅美語' ? '達悟語' : lang;
+});
 
 /**
  * Generates a stable color for a dialect based on its language group.
@@ -13,23 +22,36 @@ export const getDialectColor = (dialectOrKey: string): string => {
     if (dialectOrKey.includes('|')) {
         [lang, dia] = dialectOrKey.split('|');
     } else {
-        // If only dialect name is provided, find its language group
-        const groups = dialectsBundle.languageGroups;
-        for (const [l, dialects] of Object.entries(groups)) {
-            if (dialects.includes(dialectOrKey)) {
-                lang = l;
-                dia = dialectOrKey;
-                break;
+        const groups = dialectsBundle.languageGroups as Record<string, string[]>;
+        if (dialectOrKey in groups) {
+            lang = dialectOrKey;
+            dia = '';
+        } else {
+            // If only dialect name is provided, find its language group
+            for (const [l, dialects] of Object.entries(groups)) {
+                if (dialects.includes(dialectOrKey)) {
+                    lang = l;
+                    dia = dialectOrKey;
+                    break;
+                }
             }
         }
     }
 
-    // 2. Identify Language Index for Hue
-    const allLanguages = dialectsBundle.allLanguages;
-    const langIndex = allLanguages.indexOf(lang);
+    // 2. Identify Language Index for Hue using population sequence
+    let langIndex = rankedLanguages.indexOf(lang);
 
-    // Use a default hue if not found, otherwise spread 16 languages across 360 degrees
-    const hue = langIndex === -1 ? 0 : (langIndex * (360 / allLanguages.length)) % 360;
+    // Handle variants map fallback
+    if (langIndex === -1 && lang === '雅美語') langIndex = rankedLanguages.indexOf('達悟語');
+    if (langIndex === -1 && lang === '卡那卡那 富語') langIndex = rankedLanguages.indexOf('卡那卡那富語');
+
+    // Fallback if truly not in ranking
+    if (langIndex === -1) {
+        langIndex = dialectsBundle.allLanguages.indexOf(lang);
+    }
+
+    const totalHues = rankedLanguages.length || 16;
+    const hue = langIndex === -1 ? 0 : (langIndex * (360 / totalHues)) % 360;
 
     // 3. Identify Dialect Index within that language for Lightness/Saturation
     const group = dialectsBundle.languageGroups[lang as keyof typeof dialectsBundle.languageGroups] || [];
