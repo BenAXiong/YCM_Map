@@ -13,7 +13,6 @@ type Props = {
     setExpandedGroups: React.Dispatch<React.SetStateAction<Set<string>>>;
 
     selectedDialects: Set<string>;
-    showFilterColors: boolean;
     onToggleLanguage: (lang: string) => void;
     onToggleDialect: (dialect: string) => void;
     onSelectAll: () => void;
@@ -38,7 +37,6 @@ const DialectFilterPanel: React.FC<Props> = ({
     expandedGroups,
     setExpandedGroups,
     selectedDialects,
-    showFilterColors,
     onToggleLanguage,
     onToggleDialect,
     onSelectAll,
@@ -170,9 +168,9 @@ const DialectFilterPanel: React.FC<Props> = ({
                                 return (
                                     <div key={lang} className={`border border-stone-50 rounded-[1.5rem] overflow-hidden transition-all ${expandedGroups.has(lang) ? 'shadow-md ring-1 ring-emerald-500/10' : ''}`}>
                                         <div
-                                            className={`flex items-center justify-between px-4 py-3.5 transition-colors cursor-pointer group/row ${!showFilterColors ? 'bg-stone-50/50 hover:bg-stone-100' : ''}`}
+                                            className="flex items-center justify-between px-4 py-3.5 transition-colors cursor-pointer group/row"
                                             style={{
-                                                backgroundColor: showFilterColors ? getDialectColor(lang).replace('hsl(', 'hsla(').replace(')', ', 0.12)') : undefined
+                                                backgroundColor: getDialectColor(lang).replace('hsl(', 'hsla(').replace(')', ', 0.12)')
                                             }}
                                             onClick={() => toggleGroup(lang)}
                                         >
@@ -225,10 +223,10 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                     return (
                                                         <div
                                                             key={dialect}
-                                                            className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${!showFilterColors ? 'hover:bg-stone-50 border border-stone-50' : ''}`}
+                                                            className="flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all"
                                                             style={{
-                                                                backgroundColor: showFilterColors ? color.replace('hsl(', 'hsla(').replace(')', ', 0.08)') : undefined,
-                                                                borderColor: showFilterColors ? color.replace('hsl(', 'hsla(').replace(')', ', 0.2)') : undefined
+                                                                backgroundColor: color.replace('hsl(', 'hsla(').replace(')', ', 0.08)'),
+                                                                borderColor: color.replace('hsl(', 'hsla(').replace(')', ', 0.2)')
                                                             }}
                                                             onClick={() => onToggleDialect(dialect)}
                                                         >
@@ -271,8 +269,8 @@ const DialectFilterPanel: React.FC<Props> = ({
                 <button
                     onClick={() => setIsOpen(true)}
                     className={`fixed z-40 shadow-2xl hover:bg-opacity-100 transition-all flex items-center justify-center gap-3 font-black tracking-widest uppercase text-xs active:scale-95 ${isMobile
-                            ? 'bottom-8 right-6 rounded-2xl px-5 h-12 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
-                            : 'top-6 right-6 rounded-2xl p-4 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
+                        ? 'bottom-8 right-6 rounded-2xl px-5 h-12 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
+                        : 'top-6 right-6 rounded-2xl p-4 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
                         }`}
                 >
                     {isMobile ? (

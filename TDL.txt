@@ -1,19 +1,17 @@
 CORE
-add names and hide toggles
-reorder toggles
-check selection persistence
-deal with overlaps
 english!!!
 title?
 reorder dialects
 optimize loading?
 
 UI
+enable single area coloring vs shared dialects vs shared language
 add "about" overlay
-grey out no info areas
 filter avoid wiggle when scroll bar activates
 match mobile language colors in filter with pc (and order)
 click on legend item to highlight area
+remove double click to zoom
+adapting lvl2 names font size
 
 EXTRA
 population data of each division (yes, even li/cun ifpossible)

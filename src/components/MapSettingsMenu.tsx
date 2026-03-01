@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Settings } from 'lucide-react';
+import { Settings, Globe, ChevronDown } from 'lucide-react';
 
 type Props = {
     isOpen: boolean;
@@ -21,8 +21,18 @@ type Props = {
     showVillageColors: boolean;
     setShowVillageColors: (v: boolean) => void;
 
-    showFilterColors: boolean;
-    setShowFilterColors: (v: boolean) => void;
+    showLvl1Names: boolean;
+    setShowLvl1Names: (v: boolean) => void;
+    showLvl2Names: boolean;
+    setShowLvl2Names: (v: boolean) => void;
+    showLvl3Names: boolean;
+    setShowLvl3Names: (v: boolean) => void;
+
+    showSharedDialects: boolean;
+    setShowSharedDialects: (v: boolean) => void;
+
+    language: 'zh' | 'en';
+    setLanguage: (v: 'zh' | 'en') => void;
 };
 
 const MapSettingsMenu: React.FC<Props> = ({
@@ -38,8 +48,16 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowVillageBorders,
     showVillageColors,
     setShowVillageColors,
-    showFilterColors,
-    setShowFilterColors,
+    showLvl1Names,
+    setShowLvl1Names,
+    showLvl2Names,
+    setShowLvl2Names,
+    showLvl3Names,
+    setShowLvl3Names,
+    showSharedDialects,
+    setShowSharedDialects,
+    language,
+    setLanguage,
 }) => {
     return (
         <div
@@ -60,38 +78,98 @@ const MapSettingsMenu: React.FC<Props> = ({
                         exit={{ opacity: 0, x: -10, scale: 0.95 }}
                         className="absolute top-0 left-full ml-3 w-48 bg-white rounded-2xl shadow-xl border border-stone-200 p-4 z-40"
                     >
-                        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">地圖設定</h3>
+                        <div className="space-y-6">
+                            {/* SECTION: Map Layers */}
+                            <div>
+                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    邊界顯示
+                                </h3>
+                                <div className="space-y-3">
+                                    <ToggleRow
+                                        label="縣市"
+                                        value={showCountyBorders}
+                                        onToggle={() => setShowCountyBorders(!showCountyBorders)}
+                                    />
+                                    <ToggleRow
+                                        label="鄉鎮"
+                                        value={showTownshipContours}
+                                        onToggle={() => setShowTownshipContours(!showTownshipContours)}
+                                    />
+                                    <ToggleRow
+                                        label="村里"
+                                        value={showVillageBorders}
+                                        onToggle={() => setShowVillageBorders(!showVillageBorders)}
+                                    />
+                                    <ToggleRow
+                                        label="著色模式"
+                                        value={showVillageColors}
+                                        onToggle={() => setShowVillageColors(!showVillageColors)}
+                                        sublabel="開啟以顯示村里著色"
+                                    />
+                                    <ToggleRow
+                                        label="多重族語"
+                                        value={showSharedDialects}
+                                        onToggle={() => setShowSharedDialects(!showSharedDialects)}
+                                        sublabel="當多族語重疊時分區著色"
+                                    />
+                                </div>
+                            </div>
 
-                        <div className="space-y-4">
-                            <ToggleRow
-                                label="顯示縣市邊界"
-                                value={showCountyBorders}
-                                onToggle={() => setShowCountyBorders(!showCountyBorders)}
-                            />
-                            <ToggleRow
-                                label="顯示鄉鎮邊界"
-                                value={showTownshipContours}
-                                onToggle={() => setShowTownshipContours(!showTownshipContours)}
-                            />
-                            <ToggleRow
-                                label="顯示村里邊界"
-                                value={showVillageBorders}
-                                onToggle={() => setShowVillageBorders(!showVillageBorders)}
-                            />
-                            <ToggleRow
-                                label="固定資訊面板"
-                                value={showFixedInfo}
-                                onToggle={() => setShowFixedInfo(!showFixedInfo)}
-                            />                            <ToggleRow
-                                label="村里著色模式"
-                                value={showVillageColors}
-                                onToggle={() => setShowVillageColors(!showVillageColors)}
-                            />
-                            <ToggleRow
-                                label="篩選選項著色"
-                                value={showFilterColors}
-                                onToggle={() => setShowFilterColors(!showFilterColors)}
-                            />
+                            {/* SECTION: Area Names */}
+                            <div className="pt-2 border-t border-stone-100">
+                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    地名標註
+                                </h3>
+                                <div className="space-y-3">
+                                    <ToggleRow
+                                        label="縣市"
+                                        value={showLvl1Names}
+                                        onToggle={() => setShowLvl1Names(!showLvl1Names)}
+                                    />
+                                    <ToggleRow
+                                        label="鄉鎮"
+                                        value={showLvl2Names}
+                                        onToggle={() => setShowLvl2Names(!showLvl2Names)}
+                                    />
+                                    <ToggleRow
+                                        label="村里"
+                                        value={showLvl3Names}
+                                        onToggle={() => setShowLvl3Names(!showLvl3Names)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SECTION: UI Options */}
+                            <div className="pt-2 border-t border-stone-100">
+                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    介面設定
+                                </h3>
+                                <div className="space-y-3">
+                                    <ToggleRow
+                                        label="固定資訊欄"
+                                        value={showFixedInfo}
+                                        onToggle={() => setShowFixedInfo(!showFixedInfo)}
+                                    />
+
+                                    <div className="flex flex-col gap-2 pt-1">
+                                        <div className="flex items-center gap-2 text-stone-500">
+                                            <Globe className="w-3.5 h-3.5" />
+                                            <span className="text-xs font-bold">語言 / Language</span>
+                                        </div>
+                                        <div className="relative group/select">
+                                            <select
+                                                value={language}
+                                                onChange={(e) => setLanguage(e.target.value as 'zh' | 'en')}
+                                                className="w-full appearance-none bg-stone-100 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-stone-700 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all pr-10 hover:bg-stone-200"
+                                            >
+                                                <option value="zh">繁體中文</option>
+                                                <option value="en">English (Coming Soon)</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none group-hover/select:text-stone-600 transition-colors" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -100,18 +178,22 @@ const MapSettingsMenu: React.FC<Props> = ({
     );
 };
 
-const ToggleRow: React.FC<{ label: string; value: boolean; onToggle: () => void }> = ({
+const ToggleRow: React.FC<{ label: string; sublabel?: string; value: boolean; onToggle: () => void }> = ({
     label,
+    sublabel,
     value,
     onToggle,
 }) => (
     <div className="flex items-center justify-between">
-        <span className="text-sm text-stone-700 font-medium">{label}</span>
+        <div className="flex flex-col">
+            <span className="text-sm text-stone-700 font-bold">{label}</span>
+            {sublabel && <span className="text-[10px] text-stone-400">{sublabel}</span>}
+        </div>
         <button
             onClick={onToggle}
-            className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-emerald-500' : 'bg-stone-300'}`}
+            className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${value ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-stone-200'}`}
         >
-            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${value ? 'left-6' : 'left-1'}`} />
+            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${value ? 'left-5' : 'left-1'}`} />
         </button>
     </div>
 );

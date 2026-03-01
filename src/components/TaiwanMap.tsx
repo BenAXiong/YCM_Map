@@ -34,12 +34,16 @@ const TaiwanMap: React.FC = () => {
     SHOW_TOWNSHIP_CONTOURS: 'ycm_show_township_contours',
     SHOW_VILLAGE_BORDERS: 'ycm_show_village_borders',
     SHOW_VILLAGE_COLORS: 'ycm_show_village_colors',
-    SHOW_FILTER_COLORS: 'ycm_show_filter_colors',
     SHOW_FIXED_INFO: 'ycm_show_fixed_info',
+    SHOW_LVL1_NAMES: 'ycm_show_lvl1_names',
+    SHOW_LVL2_NAMES: 'ycm_show_lvl2_names',
+    SHOW_LVL3_NAMES: 'ycm_show_lvl3_names',
+    SHOW_SHARED_DIALECTS: 'ycm_show_shared_dialects',
+    LANGUAGE: 'ycm_language',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_DIALECTS);
+    const saved = sessionStorage.getItem(STORAGE_KEYS.SELECTED_DIALECTS);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
@@ -69,9 +73,26 @@ const TaiwanMap: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS);
     return saved !== null ? JSON.parse(saved) : false;
   });
-  const [showFilterColors, setShowFilterColors] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_FILTER_COLORS);
+
+  const [showLvl1Names, setShowLvl1Names] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_LVL1_NAMES);
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [showLvl2Names, setShowLvl2Names] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_LVL2_NAMES);
     return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [showLvl3Names, setShowLvl3Names] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_LVL3_NAMES);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [showSharedDialects, setShowSharedDialects] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [language, setLanguage] = useState<'zh' | 'en'>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE);
+    return (saved as 'zh' | 'en') || 'zh';
   });
 
   // --- Detail state ---
@@ -83,8 +104,8 @@ const TaiwanMap: React.FC = () => {
 
   // --- Persistence Effects ---
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_DIALECTS, JSON.stringify(Array.from(selectedDialects)));
-  }, [selectedDialects]);
+    sessionStorage.setItem(STORAGE_KEYS.SELECTED_DIALECTS, JSON.stringify(Array.from(selectedDialects)));
+  }, [selectedDialects, STORAGE_KEYS.SELECTED_DIALECTS]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_COUNTY_BORDERS, JSON.stringify(showCountyBorders));
@@ -103,12 +124,28 @@ const TaiwanMap: React.FC = () => {
   }, [showVillageColors]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_FILTER_COLORS, JSON.stringify(showFilterColors));
-  }, [showFilterColors]);
+    localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
+  }, [showFixedInfo, STORAGE_KEYS.SHOW_FIXED_INFO]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
-  }, [showFixedInfo]);
+    localStorage.setItem(STORAGE_KEYS.SHOW_LVL1_NAMES, JSON.stringify(showLvl1Names));
+  }, [showLvl1Names, STORAGE_KEYS.SHOW_LVL1_NAMES]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_LVL2_NAMES, JSON.stringify(showLvl2Names));
+  }, [showLvl2Names, STORAGE_KEYS.SHOW_LVL2_NAMES]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_LVL3_NAMES, JSON.stringify(showLvl3Names));
+  }, [showLvl3Names, STORAGE_KEYS.SHOW_LVL3_NAMES]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
+  }, [language, STORAGE_KEYS.LANGUAGE]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS, JSON.stringify(showSharedDialects));
+  }, [showSharedDialects, STORAGE_KEYS.SHOW_SHARED_DIALECTS]);
 
   const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error } = useTaiwanTopo(
     'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
@@ -331,8 +368,16 @@ const TaiwanMap: React.FC = () => {
             setShowVillageBorders={setShowVillageBorders}
             showVillageColors={showVillageColors}
             setShowVillageColors={setShowVillageColors}
-            showFilterColors={showFilterColors}
-            setShowFilterColors={setShowFilterColors}
+            showLvl1Names={showLvl1Names}
+            setShowLvl1Names={setShowLvl1Names}
+            showLvl2Names={showLvl2Names}
+            setShowLvl2Names={setShowLvl2Names}
+            showLvl3Names={showLvl3Names}
+            setShowLvl3Names={setShowLvl3Names}
+            showSharedDialects={showSharedDialects}
+            setShowSharedDialects={setShowSharedDialects}
+            language={language}
+            setLanguage={setLanguage}
           />
 
           <button
@@ -378,6 +423,7 @@ const TaiwanMap: React.FC = () => {
         showTownshipContours={showTownshipContours}
         showVillageBorders={showVillageBorders}
         showVillageColors={showVillageColors}
+        showSharedDialects={showSharedDialects}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
         getVillageDialects={getVillageDialects}
@@ -445,6 +491,9 @@ const TaiwanMap: React.FC = () => {
           setIsDetailPinned(false);
           setHoveredTown(null);
         }}
+        showLvl1Names={showLvl1Names}
+        showLvl2Names={showLvl2Names}
+        showLvl3Names={showLvl3Names}
       />
 
       {/* Filters */}
@@ -457,7 +506,6 @@ const TaiwanMap: React.FC = () => {
         expandedGroups={expandedGroups}
         setExpandedGroups={setExpandedGroups}
         selectedDialects={selectedDialects}
-        showFilterColors={showFilterColors}
         onToggleLanguage={toggleLanguage}
         onToggleDialect={toggleDialect}
         onSelectAll={selectAll}
