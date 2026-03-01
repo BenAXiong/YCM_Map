@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import bundle from '../data/dialects.bundle.json';
 import villageLookupData from '../data/villages.lookup.json';
 
+import languageStats from '../data/language_stats.json';
+
 const villageLookup: Record<string, string[]> = (villageLookupData as any).lookup;
+const statsData = languageStats as { rankings: { tribe: string; population: number }[] };
 
 export type DialectEntry = { 族語: string; 方言別: string };
 
@@ -22,7 +25,7 @@ const norm = (s: string) =>
     (s ?? '')
         .trim()
         .replace(/\s+/g, '')
-        .replace('台', '臺'); // minimal, deterministic
+        .replace('台', '臺');
 
 const getCountyTownVillageFromProps = (p: any) => {
     const county = p?.COUNTYNAME || p?.countyName || p?.C_Name || '';
@@ -51,7 +54,39 @@ const getVillageDialects = (county: string, town: string, village: string): stri
 };
 
 export function useDialectData() {
-    const languageGroups = data.languageGroups ?? {};
+    // 1. Create a population lookup map
+    const populationMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        statsData.rankings.forEach(r => {
+            const tribe = r.tribe.trim();
+            const lang = tribe.replace(/族$/, '語');
+
+            map[tribe] = r.population;
+            map[lang] = r.population;
+
+            // Handle variations in bundle keys
+            if (lang === '卡那卡那富語') map['卡那卡那 富語'] = r.population;
+        });
+        const yamiPop = statsData.rankings.find(r => r.tribe.includes('雅美'))?.population || 0;
+        map['雅美語'] = yamiPop;
+        map['達悟語'] = yamiPop;
+        return map;
+    }, []);
+
+    // 2. Sort language groups by population
+    const languageGroups = useMemo(() => {
+        const rawGroups = data.languageGroups ?? {};
+        const entries = Object.entries(rawGroups);
+
+        // Sort by population (descending)
+        entries.sort((a, b) => {
+            const popA = populationMap[a[0]] || 0;
+            const popB = populationMap[b[0]] || 0;
+            return popB - popA;
+        });
+
+        return Object.fromEntries(entries);
+    }, [populationMap]);
 
     const allDialects = useMemo(() => {
         return (
@@ -76,5 +111,6 @@ export function useDialectData() {
         // filter helpers
         languageGroups,
         allDialects,
+        populationMap
     };
 }

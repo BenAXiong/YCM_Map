@@ -1,0 +1,87 @@
+{
+    "total": 611674,
+    "lastUpdated": "2024-12",
+    "source": "Council of Indigenous Peoples (CIP), Taiwan",
+    "rankings": [
+        {
+            "tribe": "阿美族",
+            "population": 228052,
+            "rank": 1
+        },
+        {
+            "tribe": "排灣族",
+            "population": 110525,
+            "rank": 2
+        },
+        {
+            "tribe": "泰雅族",
+            "population": 99792,
+            "rank": 3
+        },
+        {
+            "tribe": "布農族",
+            "population": 63727,
+            "rank": 4
+        },
+        {
+            "tribe": "太魯閣族",
+            "population": 35522,
+            "rank": 5
+        },
+        {
+            "tribe": "卑南族",
+            "population": 15873,
+            "rank": 6
+        },
+        {
+            "tribe": "魯凱族",
+            "population": 14155,
+            "rank": 7
+        },
+        {
+            "tribe": "賽德克族",
+            "population": 11582,
+            "rank": 8
+        },
+        {
+            "tribe": "賽夏族",
+            "population": 7300,
+            "rank": 9
+        },
+        {
+            "tribe": "鄒族",
+            "population": 6906,
+            "rank": 10
+        },
+        {
+            "tribe": "雅美族",
+            "population": 4978,
+            "rank": 11
+        },
+        {
+            "tribe": "噶瑪蘭族",
+            "population": 1670,
+            "rank": 12
+        },
+        {
+            "tribe": "撒奇萊雅族",
+            "population": 1123,
+            "rank": 13
+        },
+        {
+            "tribe": "邵族",
+            "population": 917,
+            "rank": 14
+        },
+        {
+            "tribe": "拉阿魯哇族",
+            "population": 471,
+            "rank": 15
+        },
+        {
+            "tribe": "卡那卡那富族",
+            "population": 424,
+            "rank": 16
+        }
+    ]
+}

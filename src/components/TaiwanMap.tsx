@@ -88,7 +88,7 @@ const TaiwanMap: React.FC = () => {
     'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
     (showVillageBorders || showVillageColors) ? 'https://cdn.jsdelivr.net/npm/taiwan-atlas/villages-10t.json' : undefined
   );
-  const { languageGroups, allDialects, getDialects, getCountyTownVillageFromProps, getVillageDialects } = useDialectData();
+  const { languageGroups, allDialects, getDialects, getCountyTownVillageFromProps, getVillageDialects, populationMap } = useDialectData();
 
   // --- Search list (from topo features) ---
   const allTownships = useMemo(() => {
@@ -251,6 +251,7 @@ const TaiwanMap: React.FC = () => {
         isOpen={isFilterOpen}
         setIsOpen={setIsFilterOpen}
         languageGroups={languageGroups}
+        populationMap={populationMap}
         expandedGroups={expandedGroups}
         setExpandedGroups={setExpandedGroups}
         selectedDialects={selectedDialects}

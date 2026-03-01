@@ -1,4 +1,5 @@
 CORE
+mobile UI: hide title, filters from bottom, recenter...
 legend
 language toggle
 optimize loading
@@ -9,6 +10,8 @@ Android & iPhone app icon
 add "about" overlay
 EXTRA
 relief
+
+PHRASEBOOK
 tooltips: (show more) collect population info on the web (add sources)
 features: "Hi!" = how to say hello, thanks and drink! in each language (url klokah)
 famous people
@@ -17,4 +20,4 @@ one geyao
 
 
 
-Do the same for the population of each division (yes, even li/cun ifpossible).
+population data of each division (yes, even li/cun ifpossible).

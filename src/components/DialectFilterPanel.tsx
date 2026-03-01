@@ -1,12 +1,13 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, ChevronRight, Filter, Search, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X } from 'lucide-react';
 
 type Props = {
     isOpen: boolean;
     setIsOpen: (v: boolean) => void;
 
     languageGroups: Record<string, string[]>;
+    populationMap: Record<string, number>;
     expandedGroups: Set<string>;
     setExpandedGroups: React.Dispatch<React.SetStateAction<Set<string>>>;
 
@@ -30,6 +31,7 @@ const DialectFilterPanel: React.FC<Props> = ({
     isOpen,
     setIsOpen,
     languageGroups,
+    populationMap,
     expandedGroups,
     setExpandedGroups,
     selectedDialects,
@@ -133,14 +135,14 @@ const DialectFilterPanel: React.FC<Props> = ({
                                         dialectsArray.length > 0 && dialectsArray.every((d) => selectedDialects.has(d));
 
                                     return (
-                                        <div key={lang} className="border border-stone-100 rounded-xl overflow-hidden">
+                                        <div key={lang} className="border border-stone-100 rounded-xl">
                                             <div
-                                                className="flex items-center justify-between p-3 bg-stone-50/50 hover:bg-stone-100 transition-colors cursor-pointer"
+                                                className={`flex items-center justify-between p-3 bg-stone-50/50 hover:bg-stone-100 transition-colors cursor-pointer group/row ${expandedGroups.has(lang) ? 'rounded-t-xl' : 'rounded-xl'}`}
                                                 onClick={() => toggleGroup(lang)}
                                             >
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
-                                                        className="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                                                        className="w-5 h-5 rounded border flex shrink-0 items-center justify-center transition-colors"
                                                         style={{
                                                             backgroundColor: allSelected ? '#10b981' : 'transparent',
                                                             borderColor: allSelected ? '#10b981' : '#d1d5db',
@@ -151,6 +153,15 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                         }}
                                                     >
                                                         {allSelected && <Check className="w-3 h-3 text-white" />}
+                                                    </div>
+
+                                                    {/* Info Icon with Tooltip */}
+                                                    <div className="relative group/info">
+                                                        <Info className="w-3.5 h-3.5 text-stone-300 hover:text-emerald-500 transition-colors" />
+                                                        <div className="absolute left-1/2 -top-8 -translate-x-1/2 bg-stone-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                                                            {populationMap[lang]?.toLocaleString() || '---'} 人
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-800" />
+                                                        </div>
                                                     </div>
 
                                                     <span className="font-medium text-stone-800">{lang}</span>
@@ -164,7 +175,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                             </div>
 
                                             {expandedGroups.has(lang) && (
-                                                <div className="p-2 bg-white space-y-1">
+                                                <div className="p-2 bg-white space-y-1 rounded-b-xl">
                                                     {dialectsArray.map((dialect) => {
                                                         const selected = selectedDialects.has(dialect);
                                                         const color = getDialectColor(dialect);
