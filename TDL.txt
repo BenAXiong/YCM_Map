@@ -10,6 +10,7 @@ UI
 add "about" overlay
 grey out no info areas
 filter avoid wiggle when scroll bar activates
+match mobile language colors in filter with pc (and order)
 
 EXTRA
 population data of each division (yes, even li/cun ifpossible)

@@ -213,8 +213,25 @@ const TaiwanMap: React.FC = () => {
             className={isMobile && !isTitleExpanded ? 'cursor-pointer p-1' : 'bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-sm border border-stone-200 cursor-pointer hover:bg-white/90 transition-colors overflow-hidden'}
           >
             <div className="flex items-center gap-3">
-              <div className={isMobile && !isTitleExpanded ? '' : 'p-2 bg-emerald-50 rounded-xl'}>
-                <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} />
+              <div className={isMobile && !isTitleExpanded ? '' : 'p-2 rounded-xl'}>
+                {/* <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} /> */}
+                <div
+                  className={
+                    isMobile && !isTitleExpanded
+                      ? ""
+                      : "rounded-xl p-0 bg-transparent w-10 h-10 md:w-12 md:h-12" // desktop size
+                  }
+                >
+                  <img
+                    src="/logo-test_t.png"
+                    alt="Taiwan Yincumin Map"
+                    className={
+                      isMobile && !isTitleExpanded
+                        ? "w-8 h-8 drop-shadow-md object-contain"
+                        : "w-full h-full object-contain" // fill container on desktop
+                    }
+                  />
+                </div>
               </div>
               {(!isMobile || isTitleExpanded) && (
                 <motion.div
