@@ -1,12 +1,12 @@
 CORE
 title?
 mobile: restablish show more tooltip
+mobile: fix inability to zoom out
 deal with overlaps
 clickmode: higlight all shared lang or others?
 optimize loading
 
 UI
-Android & iPhone app icon
 add "about" overlay
 grey out no info areas
 filter avoid wiggle when scroll bar activates

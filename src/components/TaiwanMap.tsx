@@ -223,7 +223,8 @@ const TaiwanMap: React.FC = () => {
                   className="flex flex-col"
                 >
                   <h1 className="text-lg md:text-2xl font-bold text-stone-900 tracking-tight whitespace-nowrap">
-                    臺灣族語分佈地圖
+                    以~
+                    {/* 臺灣族語分佈地圖 */}
                   </h1>
                   <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">Taiwan Indigenous Languages Distribution</p>
                 </motion.div>
