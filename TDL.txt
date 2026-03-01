@@ -1,9 +1,9 @@
 CORE
-mobile UI: hide title, filters from bottom, recenter...
-PC UI: increase languages pills
-how to deal with overlaps?
-optimize loading
+title?
+mobile: restablish show more tooltip
+deal with overlaps
 clickmode: higlight all shared lang or others?
+optimize loading
 
 UI
 Android & iPhone app icon
@@ -12,14 +12,18 @@ grey out no info areas
 filter avoid wiggle when scroll bar activates
 
 EXTRA
+population data of each division (yes, even li/cun ifpossible)
 
 PHRASEBOOK
-tooltips: (show more) collect population info on the web (add sources)
-features: "Hi!" = how to say hello, thanks and drink! in each language (url klokah)
+audio audio on click(icon?)
+fun sentences (i love xmj, ni zui le!, he jiu!!!, )
+
+ACTIVITIES
+(including accomodations, restaurants, shops, etc.)
+
+CULTURE
 famous people
 one modern song
 one geyao
-
-
-
-population data of each division (yes, even li/cun ifpossible).
+harvest and other festivals
+myths&legends

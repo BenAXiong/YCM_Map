@@ -246,17 +246,26 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('display', showVillageColors ? 'block' : 'none')
                     .style('cursor', 'pointer')
                     .on('mouseenter', (event: any, d: any) => {
-                        stateRef.current.onHover(d.properties, event.clientX, event.clientY);
+                        const { onHover } = stateRef.current;
+                        // Use a small timeout to provide a grace period (prevent flickering when crossing thin boundaries)
+                        if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
+                        (window as any).hoverTimeout_ycm = setTimeout(() => {
+                            onHover(d.properties, event.clientX, event.clientY);
+                        }, 250);
+
                         d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 0.8).raise();
                     })
                     .on('mousemove', (event: any, d: any) => {
+                        // Keep position updated but let the enter delay handle the property swap
                         stateRef.current.onHover(d.properties, event.clientX, event.clientY);
                     })
                     .on('mouseleave', (event: any) => {
+                        if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                         stateRef.current.onLeave();
                         d3.select(event.currentTarget).attr('stroke', 'none');
                     })
                     .on('click', (_event: any, d: any) => {
+                        if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                         stateRef.current.onClickTown(d.properties);
                     });
             }
@@ -275,7 +284,12 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 .attr('pointer-events', showVillageColors ? 'none' : 'auto')
                 .style('cursor', 'pointer')
                 .on('mouseenter', (event: any, d: any) => {
-                    stateRef.current.onHover(d.properties, event.clientX, event.clientY);
+                    const { onHover } = stateRef.current;
+                    if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
+                    (window as any).hoverTimeout_ycm = setTimeout(() => {
+                        onHover(d.properties, event.clientX, event.clientY);
+                    }, 50); // Shorter for townships as they are larger targets
+
                     d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 1).raise();
                     if (gVillagesRef.current) d3.select(gVillagesRef.current).raise();
                     if (gBordersRef.current) d3.select(gBordersRef.current).raise();
@@ -283,7 +297,8 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 .on('mousemove', (event: any, d: any) => {
                     stateRef.current.onHover(d.properties, event.clientX, event.clientY);
                 })
-                .on('mouseleave', () => {
+                .on('mouseleave', function () {
+                    if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                     stateRef.current.onLeave();
                     const contour = contourRef.current;
                     d3.select(gTownshipsRef.current)
@@ -291,7 +306,8 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         .attr('stroke', contour ? '#cbd5e1' : '#ffffff')
                         .attr('stroke-width', contour ? 0.5 : 0.3);
                 })
-                .on('click', (_event: any, d: any) => {
+                .on('click', function (_event: any, d: any) {
+                    if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                     stateRef.current.onClickTown(d.properties);
                 });
 

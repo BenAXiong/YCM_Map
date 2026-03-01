@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Info } from 'lucide-react';
 import type { AreaLabel } from './types';
 
 type Props = {
@@ -59,36 +60,34 @@ const FixedInfoPanel: React.FC<Props> = ({
                     )}
 
                     <div className="space-y-6 overflow-hidden flex flex-col flex-1">
-                        {/* Area Stats */}
-                        <div className="grid grid-cols-2 gap-4 bg-stone-50/50 p-4 rounded-3xl border border-stone-100/50">
-                            <div className="flex flex-col">
-                                <span className="text-[9px] uppercase font-black text-stone-400 tracking-widest mb-1">區域人口</span>
-                                <span className="text-xl font-mono font-black text-stone-700 leading-none">---</span>
-                            </div>
-                            <div className="flex flex-col text-right border-l border-stone-200/50 pl-4">
-                                <span className="text-[9px] uppercase font-black text-stone-400 tracking-widest mb-1">分佈語言</span>
-                                <span className="text-xl font-mono font-black text-emerald-600 leading-none">{hoveredDialects.length}</span>
-                            </div>
-                        </div>
-
                         {/* Dialect Tabs + Phrases */}
                         {hoveredDialects.length > 0 && (
                             <div className="flex flex-col flex-1 overflow-hidden">
-                                <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-2">常用詞彙 (Phrases)</span>
+                                <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-2">常用詞彙</span>
 
                                 <div className="flex flex-wrap gap-1 mb-3">
-                                    {hoveredDialects.map((d) => (
-                                        <button
-                                            key={d}
-                                            onClick={() => onSelectDialect(d)}
-                                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all border ${selectedDialect === d
-                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                                : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
-                                                }`}
-                                        >
-                                            {d}
-                                        </button>
-                                    ))}
+                                    {hoveredDialects.map((d) => {
+                                        const bgColor = getDialectColor(d);
+                                        const isActive = selectedDialect === d;
+
+                                        return (
+                                            <button
+                                                key={d}
+                                                onClick={() => onSelectDialect(d)}
+                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${isActive
+                                                    ? 'border-transparent shadow-sm'
+                                                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                                                    }`}
+                                                style={{
+                                                    backgroundColor: isActive ? bgColor : undefined,
+                                                    color: isActive ? 'white' : undefined,
+                                                    textShadow: isActive ? '0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black' : 'none'
+                                                }}
+                                            >
+                                                {d}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Phrases List */}

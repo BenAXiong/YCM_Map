@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapIcon, RotateCcw } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { getDialectColor } from './dialectColors';
 
 import { useTaiwanTopo } from '../hooks/useTaiwanTopo';
@@ -17,6 +17,13 @@ const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
   const [hoveredTown, setHoveredTown] = useState<any>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // --- Persistence Keys ---
   const STORAGE_KEYS = {
@@ -69,6 +76,7 @@ const TaiwanMap: React.FC = () => {
   const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
   const [isDetailPinned, setIsDetailPinned] = useState(false);
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
+  const [isTitleExpanded, setIsTitleExpanded] = useState(false);
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -197,17 +205,43 @@ const TaiwanMap: React.FC = () => {
   return (
     <div className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-6 flex justify-between items-start pointer-events-none">
-        <div className="flex flex-col gap-3 pointer-events-auto">
-          <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-stone-200">
-            <h1 className="text-2xl font-bold text-stone-900 tracking-tight flex items-center gap-2">
-              <MapIcon className="w-6 h-6 text-emerald-600" />
-              臺灣族語分佈地圖
-            </h1>
-            <p className="text-stone-500 text-sm mt-1">Taiwan Indigenous Languages Distribution</p>
-            {loading && <p className="text-xs text-stone-400 mt-2">Loading topojson…</p>}
-            {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-          </div>
+      <header className="absolute top-0 left-0 right-0 z-30 p-4 md:p-6 flex justify-between items-start pointer-events-none">
+        <div className="flex flex-col gap-3 pointer-events-auto max-w-[80vw]">
+          <motion.div
+            layout
+            onClick={() => setIsTitleExpanded(!isTitleExpanded)}
+            className={isMobile && !isTitleExpanded ? 'cursor-pointer p-1' : 'bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-sm border border-stone-200 cursor-pointer hover:bg-white/90 transition-colors overflow-hidden'}
+          >
+            <div className="flex items-center gap-3">
+              <div className={isMobile && !isTitleExpanded ? '' : 'p-2 bg-emerald-50 rounded-xl'}>
+                <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} />
+              </div>
+              {(!isMobile || isTitleExpanded) && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex flex-col"
+                >
+                  <h1 className="text-lg md:text-2xl font-bold text-stone-900 tracking-tight whitespace-nowrap">
+                    臺灣族語分佈地圖
+                  </h1>
+                  <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">Taiwan Indigenous Languages Distribution</p>
+                </motion.div>
+              )}
+            </div>
+            {isTitleExpanded && isMobile && (loading || error) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                className="mt-3 pt-3 border-t border-stone-100"
+              >
+                {loading && <p className="text-[10px] text-stone-400">正在載入地理數據...</p>}
+                {error && <p className="text-[10px] text-red-500">{error}</p>}
+              </motion.div>
+            )}
+            {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">Loading topojson…</p>}
+            {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
+          </motion.div>
 
           <MapSettingsMenu
             isOpen={isSettingsOpen}
@@ -253,6 +287,8 @@ const TaiwanMap: React.FC = () => {
         getCountyTownVillageFromProps={getCountyTownVillageFromProps}
         onHover={(props, x, y) => {
           if (!isDetailPinned) {
+            // Add a small delay/grace period via state is already handled by standard React state, 
+            // but we can ensure the move logic is smooth.
             setHoveredTown(props);
           }
           setTooltipPos({ x, y });
@@ -297,6 +333,7 @@ const TaiwanMap: React.FC = () => {
 
       {/* Filters */}
       <DialectFilterPanel
+        isMobile={isMobile}
         isOpen={isFilterOpen}
         setIsOpen={setIsFilterOpen}
         languageGroups={languageGroups}
@@ -323,6 +360,7 @@ const TaiwanMap: React.FC = () => {
         hoveredLabel={hoveredLabel}
         hoveredDialects={hoveredDialects}
         getDialectColor={getDialectColor}
+        populationMap={populationMap}
         onShowMore={() => setIsDetailPinned(true)}
         onMouseEnter={() => { }}
         onMouseLeave={() => { }}
@@ -347,8 +385,10 @@ const TaiwanMap: React.FC = () => {
         />
       </div>
 
-      <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-4">
+      <div className="absolute bottom-8 left-6 z-10 pointer-events-none flex flex-col gap-4">
         <MapLegend
+          isMobile={isMobile}
+
           selectedDialects={selectedDialects}
           languageGroups={languageGroups}
           getDialectColor={getDialectColor}

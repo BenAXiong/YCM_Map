@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { ChevronUp, ListFilter } from 'lucide-react';
 
 type Props = {
+    isMobile?: boolean;
     selectedDialects: Set<string>;
     languageGroups: Record<string, string[]>;
     getDialectColor: (dialect: string) => string;
 };
 
-const MapLegend: React.FC<Props> = ({ selectedDialects, languageGroups, getDialectColor }) => {
+const MapLegend: React.FC<Props> = ({ isMobile = false, selectedDialects, languageGroups, getDialectColor }) => {
+    const [isExpanded, setIsExpanded] = useState(!isMobile);
+
+    useEffect(() => {
+        setIsExpanded(!isMobile);
+    }, [isMobile]);
+
     // Determine which languages should be displayed
     const activeLanguages: Array<{ lang: string; dialects: string[] }> = [];
 
@@ -23,33 +31,64 @@ const MapLegend: React.FC<Props> = ({ selectedDialects, languageGroups, getDiale
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-stone-200 w-64 max-h-[70vh] overflow-y-auto pointer-events-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className={`bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 ${isExpanded ? 'w-64 md:w-72' : 'w-fit'} max-h-[70vh] flex flex-col pointer-events-auto overflow-hidden transition-all duration-300`}
             >
-                <div className="space-y-3">
-                    {activeLanguages.map(({ lang, dialects }) => (
-                        <div key={lang} className="flex flex-col">
-                            <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">
-                                {lang}
-                            </span>
-                            <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-stone-100">
-                                {dialects.map((dialect) => (
-                                    <div key={dialect} className="flex items-center gap-2">
-                                        <div
-                                            className="w-3 h-3 rounded-full shadow-inner shrink-0"
-                                            style={{ backgroundColor: getDialectColor(dialect) }}
-                                        />
-                                        <span className="text-xs text-stone-600 truncate" title={dialect}>
-                                            {dialect}
-                                        </span>
-                                    </div>
-                                ))}
+                {/* Header / Minimized State */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className={`flex items-center justify-between ${isMobile && !isExpanded ? 'px-5 h-12' : isMobile ? 'p-3' : 'p-4'} w-full hover:bg-stone-50 transition-colors`}
+                >
+                    <div className="flex items-center gap-3">
+                        {isMobile && !isExpanded ? (
+                            <ListFilter className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                            <div className={`${isMobile ? 'p-1' : 'p-1.5'} bg-emerald-50 rounded-lg`}>
+                                <ListFilter className="w-4 h-4 text-emerald-600" />
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        )}
+                        <span className={`${isMobile && !isExpanded ? 'font-black tracking-widest uppercase text-xs text-stone-900' : `font-bold text-stone-800 ${isMobile ? 'text-xs' : 'text-sm'}`}`}>圖例</span>
+                    </div>
+                    <motion.div
+                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                        <ChevronUp className="w-4 h-4 text-emerald-600" />
+                    </motion.div>
+                </button>
+
+                {/* Content */}
+                <motion.div
+                    initial={false}
+                    animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
+                    className="overflow-hidden"
+                >
+                    <div className="p-4 pt-0 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <div className="border-t border-stone-100 pt-4" />
+                        {activeLanguages.map(({ lang, dialects }) => (
+                            <div key={lang} className="flex flex-col">
+                                <span className="text-[16px] font-black text-stone-800 uppercase tracking-widest mb-2">
+                                    {lang}
+                                </span>
+                                <div className="flex flex-col gap-2 pl-3 border-l-2 border-stone-100">
+                                    {dialects.map((dialect) => (
+                                        <div key={dialect} className="flex items-center gap-3">
+                                            <div
+                                                className="w-3 h-3 rounded-full shadow-sm shrink-0 border border-white/50"
+                                                style={{ backgroundColor: getDialectColor(dialect) }}
+                                            />
+                                            <span className="text-[14px] font-medium text-stone-600 truncate" title={dialect}>
+                                                {dialect}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
             </motion.div>
         </AnimatePresence>
     );

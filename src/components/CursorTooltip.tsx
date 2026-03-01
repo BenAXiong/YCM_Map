@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Info } from 'lucide-react';
 import type { AreaLabel, TooltipPos } from './types';
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
     hoveredDialects: string[];
 
     getDialectColor: (dialect: string) => string;
+    populationMap: Record<string, number>;
     onShowMore: () => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
@@ -23,10 +25,22 @@ const CursorTooltip: React.FC<Props> = ({
     hoveredLabel,
     hoveredDialects,
     getDialectColor,
+    populationMap,
     onShowMore,
     onMouseEnter,
     onMouseLeave,
 }) => {
+    const population = React.useMemo(() => {
+        const key = `${hoveredLabel.county}|${hoveredLabel.town}|${hoveredLabel.village || ''}`;
+        return populationMap[key] || populationMap[`${hoveredLabel.county}|${hoveredLabel.town}|`] || 0;
+    }, [hoveredLabel, populationMap]);
+
+    const getPillStyle = (bgColor: string) => ({
+        backgroundColor: bgColor,
+        color: 'white',
+        textShadow: '0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black',
+    });
+
     return (
         <AnimatePresence>
             {hoveredTown && !showFixedInfo && (
@@ -37,8 +51,8 @@ const CursorTooltip: React.FC<Props> = ({
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
                     style={{
-                        left: tooltipPos.x + 20,
-                        top: tooltipPos.y + 20,
+                        left: typeof window !== 'undefined' ? Math.max(10, Math.min(tooltipPos.x + 20, window.innerWidth - 280)) : tooltipPos.x + 20,
+                        top: typeof window !== 'undefined' ? Math.max(10, Math.min(tooltipPos.y + 20, window.innerHeight - 250)) : tooltipPos.y + 20,
                         position: 'fixed',
                     }}
                     className="z-50 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-stone-200 min-w-[200px] pointer-events-auto"
@@ -54,6 +68,18 @@ const CursorTooltip: React.FC<Props> = ({
                         </h3>
                     </div>
 
+                    {/* Population Tooltip Icon */}
+                    <div className="absolute top-4 right-4 group/pop">
+                        <Info className="w-4 h-4 text-stone-300 hover:text-emerald-500 transition-colors cursor-help" />
+                        <div className="absolute right-0 bottom-full mb-2 opacity-0 group-hover/pop:opacity-100 transition-opacity pointer-events-none translate-y-1 group-hover/pop:translate-y-0 duration-200">
+                            <div className="bg-stone-900 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-xl whitespace-nowrap font-bold flex flex-col gap-0.5">
+                                <span className="text-stone-400 uppercase tracking-widest text-[8px]">區域人口</span>
+                                <span className="text-emerald-400 font-mono text-sm">{population > 0 ? population.toLocaleString() : '---'}</span>
+                            </div>
+                            <div className="w-2 h-2 bg-stone-900 rotate-45 absolute -bottom-1 right-2" />
+                        </div>
+                    </div>
+
                     <div className="mt-4 space-y-3">
                         <div className="border-t border-stone-100 pt-3">
                             <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-1.5">分佈族語</span>
@@ -62,27 +88,27 @@ const CursorTooltip: React.FC<Props> = ({
                                     hoveredDialects.map((d) => (
                                         <span
                                             key={d}
-                                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm"
-                                            style={{ backgroundColor: getDialectColor(d) }}
+                                            className="px-3 py-1.5 rounded-lg text-lg font-bold shadow-sm"
+                                            style={getPillStyle(getDialectColor(d))}
                                         >
                                             {d}
                                         </span>
                                     ))
                                 ) : (
-                                    <span className="text-xs text-stone-400 italic">無特定數據</span>
+                                    <span className="text-sm text-stone-400 italic">無特定數據</span>
                                 )}
                             </div>
                         </div>
 
                         <div className="pt-2 flex justify-end">
                             <button
-                                className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl text-[10px] font-black tracking-widest transition-colors flex items-center justify-center gap-1 shadow-sm uppercase"
+                                className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl text-sm font-black tracking-widest transition-colors flex items-center justify-center gap-1 shadow-sm uppercase"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onShowMore();
                                 }}
                             >
-                                詳情例句 / 人口數據 →
+                                例句 & 文化 →
                             </button>
                         </div>
                     </div>
