@@ -88,14 +88,14 @@ const TaiwanMap: React.FC = () => {
     'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
     (showVillageBorders || showVillageColors) ? 'https://cdn.jsdelivr.net/npm/taiwan-atlas/villages-10t.json' : undefined
   );
-  const { languageGroups, allDialects, getDialects, getCountyTownFromProps } = useDialectData();
+  const { languageGroups, allDialects, getDialects, getCountyTownVillageFromProps, getVillageDialects } = useDialectData();
 
   // --- Search list (from topo features) ---
   const allTownships = useMemo(() => {
     if (!townFeatures) return [];
     return (townFeatures as any).features.map((f: any) => {
       const p = f.properties || {};
-      const { county, town } = getCountyTownFromProps(p);
+      const { county, town } = getCountyTownVillageFromProps(p);
       return {
         id: p.TOWNID || p.townId || p.T_Code || `${county}-${town}-${Math.random().toString(16).slice(2)}`,
         county,
@@ -103,7 +103,7 @@ const TaiwanMap: React.FC = () => {
         properties: p,
       };
     });
-  }, [townFeatures, getCountyTownFromProps]);
+  }, [townFeatures, getCountyTownVillageFromProps]);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -158,14 +158,17 @@ const TaiwanMap: React.FC = () => {
   const clearAll = () => setSelectedDialects(new Set());
 
   const hoveredLabel = useMemo(() => {
-    if (!hoveredTown) return { county: '', town: '' };
-    return getCountyTownFromProps(hoveredTown);
-  }, [hoveredTown, getCountyTownFromProps]);
+    if (!hoveredTown) return { county: '', town: '', village: '' };
+    return getCountyTownVillageFromProps(hoveredTown);
+  }, [hoveredTown, getCountyTownVillageFromProps]);
 
   const hoveredDialects = useMemo(() => {
     if (!hoveredTown) return [];
+    if (showVillageColors && hoveredLabel.village) {
+      return getVillageDialects(hoveredLabel.county, hoveredLabel.town, hoveredLabel.village);
+    }
     return getDialects(hoveredLabel.county, hoveredLabel.town);
-  }, [hoveredTown, hoveredLabel.county, hoveredLabel.town, getDialects]);
+  }, [hoveredTown, hoveredLabel, getDialects, getVillageDialects, showVillageColors]);
 
   return (
     <div className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans">
@@ -212,14 +215,14 @@ const TaiwanMap: React.FC = () => {
         showVillageColors={showVillageColors}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
-        getCountyTownFromProps={getCountyTownFromProps}
+        getCountyTownVillageFromProps={getCountyTownVillageFromProps}
         onHover={(props, x, y) => {
           setHoveredTown(props);
           setTooltipPos({ x, y });
         }}
         onLeave={() => setHoveredTown(null)}
         onClickTown={(props) => {
-          const { county, town } = getCountyTownFromProps(props);
+          const { county, town } = getCountyTownVillageFromProps(props);
           const dialectsArray = getDialects(county, town);
           if (!dialectsArray.length) return;
 

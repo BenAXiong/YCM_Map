@@ -15,9 +15,10 @@ export type Bundle = {
     stats?: any;
 };
 
-export type CountyTown = {
+export type AreaLabel = {
     county: string;
     town: string;
+    village?: string;
 };
 
 export type TooltipPos = {

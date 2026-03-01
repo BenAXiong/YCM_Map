@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 import bundle from '../data/dialects.bundle.json';
+import villageLookupData from '../data/villages.lookup.json';
+
+const villageLookup: Record<string, string[]> = (villageLookupData as any).lookup;
 
 export type DialectEntry = { 族語: string; 方言別: string };
 
@@ -21,10 +24,11 @@ const norm = (s: string) =>
         .replace(/\s+/g, '')
         .replace('台', '臺'); // minimal, deterministic
 
-const getCountyTownFromProps = (p: any) => {
+const getCountyTownVillageFromProps = (p: any) => {
     const county = p?.COUNTYNAME || p?.countyName || p?.C_Name || '';
     const town = p?.TOWNNAME || p?.townName || p?.T_Name || '';
-    return { county, town };
+    const village = p?.VILLNAME || p?.VILLAGENAME || p?.villageName || p?.V_Name || '';
+    return { county, town, village };
 };
 
 const getEntries = (county: string, town: string): DialectEntry[] => {
@@ -36,6 +40,14 @@ const getEntries = (county: string, town: string): DialectEntry[] => {
 const getDialects = (county: string, town: string): string[] => {
     const entries = getEntries(county, town);
     return Array.from(new Set(entries.map((e) => e.方言別)));
+};
+
+const getVillageDialects = (county: string, town: string, village: string): string[] => {
+    const c = norm(county);
+    const t = norm(town);
+    const v = norm(village);
+    const key = `${c}|${t}|${v}`;
+    return villageLookup[key] || [];
 };
 
 export function useDialectData() {
@@ -56,9 +68,10 @@ export function useDialectData() {
 
         // lookup helpers
         norm,
-        getCountyTownFromProps,
+        getCountyTownVillageFromProps,
         getEntries,
         getDialects,
+        getVillageDialects,
 
         // filter helpers
         languageGroups,

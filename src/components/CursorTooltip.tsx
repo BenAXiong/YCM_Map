@@ -1,13 +1,13 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import type { CountyTown, TooltipPos } from './types';
+import type { AreaLabel, TooltipPos } from './types';
 
 type Props = {
     hoveredTown: any | null;
     showFixedInfo: boolean;
     tooltipPos: TooltipPos;
 
-    hoveredLabel: CountyTown;
+    hoveredLabel: AreaLabel;
     hoveredDialects: string[];
 
     getDialectColor: (dialect: string) => string;
@@ -35,9 +35,16 @@ const CursorTooltip: React.FC<Props> = ({
                     }}
                     className="z-50 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-stone-200 min-w-[200px]"
                 >
-                    <h3 className="text-xl font-bold text-stone-900">
-                        {hoveredLabel.county} {hoveredLabel.town}
-                    </h3>
+                    <div className="flex flex-col">
+                        {hoveredLabel.village && (
+                            <span className="block text-2xl font-black text-emerald-600 mb-0.5 tracking-tight">
+                                {hoveredLabel.village}
+                            </span>
+                        )}
+                        <h3 className="text-sm font-bold text-stone-500 uppercase tracking-wider">
+                            {hoveredLabel.county} {hoveredLabel.town}
+                        </h3>
+                    </div>
 
                     <div className="mt-3 space-y-2">
                         <div className="flex justify-between text-sm">

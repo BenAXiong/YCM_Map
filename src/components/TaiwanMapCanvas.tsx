@@ -21,7 +21,7 @@ type Props = {
     // Selection coloring
     selectedDialects: Set<string>;
     getDialects: (county: string, town: string) => string[];
-    getCountyTownFromProps: (p: any) => { county: string; town: string };
+    getCountyTownVillageFromProps: (p: any) => { county: string; town: string; village: string };
 
     // Interaction callbacks
     onHover: (props: any, clientX: number, clientY: number) => void;
@@ -45,7 +45,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showVillageColors,
             selectedDialects,
             getDialects,
-            getCountyTownFromProps,
+            getCountyTownVillageFromProps,
             onHover,
             onLeave,
             onClickTown,
@@ -82,7 +82,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showCountyBorders,
             selectedDialects,
             getDialects,
-            getCountyTownFromProps,
+            getCountyTownVillageFromProps,
             onHover,
             onLeave,
             onClickTown,
@@ -92,16 +92,18 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 showCountyBorders,
                 selectedDialects,
                 getDialects,
-                getCountyTownFromProps,
+                getCountyTownVillageFromProps,
                 onHover,
                 onLeave,
                 onClickTown,
             };
         });
 
+        const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
+
         // Update fills when selectedDialects changes (no full re-render)
         useEffect(() => {
-            const { getDialects, getCountyTownFromProps, selectedDialects } = stateRef.current;
+            const { getDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
 
             // 1. Update Townships
             if (gTownshipsRef.current) {
@@ -111,7 +113,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         if (showVillageColors) return 'transparent'; // Mode B: let villages show through
 
                         const p = d.properties || {};
-                        const { county, town } = getCountyTownFromProps(p);
+                        const { county, town } = getCountyTownVillageFromProps(p);
                         const dialectsArray = getDialects(county, town);
                         if (!dialectsArray.length) return '#f3f4f6';
                         const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
@@ -126,9 +128,9 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .selectAll<SVGPathElement, any>('.village-poly')
                     .attr('fill', (d: any) => {
                         const p = d.properties || {};
-                        const c = p.COUNTYNAME || p.countyName || p.C_Name || '';
-                        const t = p.TOWNNAME || p.townName || p.T_Name || '';
-                        const v = p.VILLAGENAME || p.villageName || p.V_Name || '';
+                        const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
+                        const t = norm(p.TOWNNAME || p.townName || p.T_Name || '');
+                        const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
                         const key = `${c}|${t}|${v}`;
                         const dialectsArray = villageLookup[key] || [];
 
@@ -138,7 +140,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         return showVillageColors ? '#f3f4f6' : 'transparent';
                     });
             }
-        }, [selectedDialects, getDialects, getCountyTownFromProps, showVillageColors]);
+        }, [selectedDialects, getDialects, getCountyTownVillageFromProps, showVillageColors]);
 
         // Show/hide county borders without redrawing
         useEffect(() => {
@@ -173,7 +175,15 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             }
             if (gVillagePolygonsRef.current) {
                 d3.select(gVillagePolygonsRef.current)
-                    .attr('display', showVillageColors ? 'block' : 'none');
+                    .attr('display', showVillageColors ? 'block' : 'none')
+                    .selectAll<SVGPathElement, any>('.village-poly')
+                    .attr('pointer-events', showVillageColors ? 'auto' : 'none');
+            }
+            if (gTownshipsRef.current) {
+                d3.select(gTownshipsRef.current)
+                    .selectAll<SVGPathElement, any>('.township')
+                    .attr('pointer-events', showVillageColors ? 'none' : 'auto')
+                    .attr('fill', showVillageColors ? 'transparent' : '#f3f4f6');
             }
         }, [showVillageBorders, showVillageColors]);
 
@@ -209,7 +219,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             const strokeColor = contourRef.current ? '#cbd5e1' : '#ffffff';
             const strokeWidth = contourRef.current ? 0.5 : 0.3;
 
-            // 1. Village Polygons (Visual only - placed at bottom)
+            // 1. Village Polygons
             if (villageFeatures) {
                 gVillagePolygons
                     .selectAll('path')
@@ -219,8 +229,24 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('d', path as any)
                     .attr('class', 'village-poly')
                     .attr('fill', '#f3f4f6')
-                    .attr('pointer-events', 'none') // Interaction stays at township level
-                    .attr('display', showVillageColors ? 'block' : 'none');
+                    .attr('stroke', 'none')
+                    .attr('pointer-events', showVillageColors ? 'auto' : 'none')
+                    .attr('display', showVillageColors ? 'block' : 'none')
+                    .style('cursor', 'pointer')
+                    .on('mouseenter', (event: any, d: any) => {
+                        stateRef.current.onHover(d.properties, event.clientX, event.clientY);
+                        d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 0.8).raise();
+                    })
+                    .on('mousemove', (event: any, d: any) => {
+                        stateRef.current.onHover(d.properties, event.clientX, event.clientY);
+                    })
+                    .on('mouseleave', (event: any) => {
+                        stateRef.current.onLeave();
+                        d3.select(event.currentTarget).attr('stroke', 'none');
+                    })
+                    .on('click', (_event: any, d: any) => {
+                        stateRef.current.onClickTown(d.properties);
+                    });
             }
 
             // 2. Township Polygons (Interaction Layer)
@@ -234,6 +260,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 .attr('fill', showVillageColors ? 'transparent' : '#f3f4f6')
                 .attr('stroke', strokeColor)
                 .attr('stroke-width', strokeWidth)
+                .attr('pointer-events', showVillageColors ? 'none' : 'auto')
                 .style('cursor', 'pointer')
                 .on('mouseenter', (event: any, d: any) => {
                     stateRef.current.onHover(d.properties, event.clientX, event.clientY);
@@ -302,11 +329,11 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             d3.select(gTownshipsRef.current)
                 .selectAll<SVGPathElement, any>('.township')
                 .attr('fill', (d: any) => {
-                    const { selectedDialects, getDialects, getCountyTownFromProps } = stateRef.current;
+                    const { selectedDialects, getDialects, getCountyTownVillageFromProps } = stateRef.current;
                     if (showVillageColors) return 'transparent'; // Mode B is handled by village-poly
 
                     const p = d.properties || {};
-                    const { county, town } = getCountyTownFromProps(p);
+                    const { county, town } = getCountyTownVillageFromProps(p);
                     const dialectsArray = getDialects(county, town);
                     if (!dialectsArray.length) return '#f3f4f6';
                     const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
@@ -320,9 +347,9 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('fill', (d: any) => {
                         const { selectedDialects } = stateRef.current;
                         const p = d.properties || {};
-                        const c = p.COUNTYNAME || p.countyName || p.C_Name || '';
-                        const t = p.TOWNNAME || p.townName || p.T_Name || '';
-                        const v = p.VILLAGENAME || p.villageName || p.V_Name || '';
+                        const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
+                        const t = norm(p.TOWNNAME || p.townName || p.T_Name || '');
+                        const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
                         const key = `${c}|${t}|${v}`;
                         const dialectsArray = villageLookup[key] || [];
 
