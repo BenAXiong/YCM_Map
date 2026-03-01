@@ -21,6 +21,7 @@ type Props = {
     // Selection coloring
     selectedDialects: Set<string>;
     getDialects: (county: string, town: string) => string[];
+    getVillageDialects: (county: string, town: string, village: string) => string[];
     getCountyTownVillageFromProps: (p: any) => { county: string; town: string; village: string };
 
     // Interaction callbacks
@@ -29,9 +30,6 @@ type Props = {
     onClickTown: (props: any) => void;
     onClickBackground?: () => void;
 };
-
-import villageLookupData from '../data/villages.lookup.json';
-const villageLookup: Record<string, string[]> = (villageLookupData as any).lookup;
 
 const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
     (
@@ -46,6 +44,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showVillageColors,
             selectedDialects,
             getDialects,
+            getVillageDialects,
             getCountyTownVillageFromProps,
             onHover,
             onLeave,
@@ -84,6 +83,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showCountyBorders,
             selectedDialects,
             getDialects,
+            getVillageDialects,
             getCountyTownVillageFromProps,
             onHover,
             onLeave,
@@ -94,6 +94,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 showCountyBorders,
                 selectedDialects,
                 getDialects,
+                getVillageDialects,
                 getCountyTownVillageFromProps,
                 onHover,
                 onLeave,
@@ -114,7 +115,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
         // Update fills when selectedDialects changes (no full re-render)
         useEffect(() => {
-            const { getDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
+            const { getDialects, getVillageDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
 
             // 1. Update Townships
             if (gTownshipsRef.current) {
@@ -139,12 +140,8 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .selectAll<SVGPathElement, any>('.village-poly')
                     .attr('fill', (d: any) => {
                         const p = d.properties || {};
-                        const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
-                        const t = normTown(p.TOWNNAME || p.townName || p.T_Name || '');
-                        const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
-                        const key = `${c}|${t}|${v}`;
-                        const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
-                        const dialectsArray = villageLookup[key] || villageLookup[`${c}|${t}|${vFallback}`] || [];
+                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const dialectsArray = getVillageDialects(county, town, village);
 
                         if (!dialectsArray.length) return showVillageColors ? '#f3f4f6' : 'transparent';
                         const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
@@ -152,7 +149,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         return showVillageColors ? '#f3f4f6' : 'transparent';
                     });
             }
-        }, [selectedDialects, getDialects, getCountyTownVillageFromProps, showVillageColors]);
+        }, [selectedDialects, getDialects, getVillageDialects, getCountyTownVillageFromProps, showVillageColors]);
 
         // Show/hide county borders without redrawing
         useEffect(() => {
@@ -376,17 +373,13 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 });
 
             if (gVillagePolygonsRef.current) {
+                const { getVillageDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
                 d3.select(gVillagePolygonsRef.current)
                     .selectAll<SVGPathElement, any>('.village-poly')
                     .attr('fill', (d: any) => {
-                        const { selectedDialects } = stateRef.current;
                         const p = d.properties || {};
-                        const c = norm(p.COUNTYNAME || p.countyName || p.C_Name || '');
-                        const t = normTown(p.TOWNNAME || p.townName || p.T_Name || '');
-                        const v = norm(p.VILLNAME || p.VILLAGENAME || p.villageName || p.V_Name || '');
-                        const key = `${c}|${t}|${v}`;
-                        const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
-                        const dialectsArray = villageLookup[key] || villageLookup[`${c}|${t}|${vFallback}`] || [];
+                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const dialectsArray = getVillageDialects(county, town, village);
 
                         if (!dialectsArray.length) return showVillageColors ? '#f3f4f6' : 'transparent';
                         const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));

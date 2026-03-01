@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import bundle from '../data/dialects.bundle.json';
 import villageLookupData from '../data/villages.lookup.json';
+import villageNotesData from '../data/villages.notes.json';
 
 import languageStats from '../data/language_stats.json';
 
 const villageLookup: Record<string, string[]> = (villageLookupData as any).lookup;
+const villageOverrides: Record<string, string[]> = (villageNotesData as any).village_dialects_overrides || {};
 const statsData = languageStats as { rankings: { tribe: string; population: number }[] };
 
 export type DialectEntry = { 族語: string; 方言別: string };
@@ -56,10 +58,19 @@ const getVillageDialects = (county: string, town: string, village: string): stri
     const t = normTown(town);
     const v = norm(village);
     const key = `${c}|${t}|${v}`;
+
+    // 1. Primary lookup (Research Data)
     if (villageLookup[key]) return villageLookup[key];
-    // Fallback: municipalities use 里 but our source data uses 村
-    const vFallback = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
-    return villageLookup[`${c}|${t}|${vFallback}`] || [];
+    const vFallbackName = v.endsWith('里') ? v.slice(0, -1) + '村' : v;
+    const keyFallback = `${c}|${t}|${vFallbackName}`;
+    if (villageLookup[keyFallback]) return villageLookup[keyFallback];
+
+    // 2. Manual Overrides (The "Fudging Trace")
+    if (villageOverrides[key]) return villageOverrides[key];
+    if (villageOverrides[keyFallback]) return villageOverrides[keyFallback];
+
+    // 3. Final Fallback: if village info is entirely missing, use the overall township data
+    return getDialects(county, town);
 };
 
 export function useDialectData() {

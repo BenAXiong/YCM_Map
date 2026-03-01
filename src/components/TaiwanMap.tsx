@@ -302,6 +302,7 @@ const TaiwanMap: React.FC = () => {
         showVillageColors={showVillageColors}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
+        getVillageDialects={getVillageDialects}
         getCountyTownVillageFromProps={getCountyTownVillageFromProps}
         onHover={(props, x, y) => {
           if (!isDetailPinned) {

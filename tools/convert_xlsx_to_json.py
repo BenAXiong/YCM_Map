@@ -356,17 +356,23 @@ def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> tuple:
     for _, row in df.iterrows():
         language = clean_name(row.get(colmap["language"]))
         dialect = clean_name(row.get(colmap["dialect"]))
-        county = clean_name(row.get(colmap["county"]))
+        county_raw = clean_name(row.get(colmap["county"]))
         township = clean_name(row.get(colmap["township"]))
         village_raw = norm_text(row.get(colmap.get("village", ""))) if "village" in colmap else ""
 
         # skip empty rows
-        if not any([language, dialect, county, township, village_raw]):
+        if not any([language, dialect, county_raw, township, village_raw]):
             continue
+
+        # Apply county-level normalization FIRST (e.g. 桃園縣 → 桃園市, 台北縣 → 新北市).
+        # This MUST happen before the context-bound township rename below, because
+        # TOWNSHIP_NORMALIZATION is keyed by the POST-normalization county name.
+        county = NAME_NORMALIZATION.get(county_raw, county_raw)
 
         rec = {"族語": language, "方言別": dialect, "縣": county, "鄉鎮市": township}
 
-        # Context-bound township rename (e.g. 復興鄉 → 復興區 under 桃園市)
+        # Context-bound township rename (e.g. 復興鄉 → 復興區 under 桃園市).
+        # Now that county is already normalized, this lookup will fire correctly.
         if county in TOWNSHIP_NORMALIZATION:
             township = TOWNSHIP_NORMALIZATION[county].get(township, township)
             rec["鄉鎮市"] = township

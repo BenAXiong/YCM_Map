@@ -6,9 +6,9 @@ Regenerate the dialect bundle and full JSON files from the raw XLSX.
 Run from the project root (`YCM_Map/`).
 
 // turbo
-1. Run the conversion script:
+1. Run the conversion script (requires UTF-8 encoding flag on Windows due to Chinese characters in the path):
 ```
-python tools\convert_xlsx_to_json.py
+$env:PYTHONIOENCODING="utf-8"; python tools\convert_xlsx_to_json.py
 ```
 
 Expected output lines:

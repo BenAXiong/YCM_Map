@@ -65,5 +65,13 @@
       "name": "大平林",
       "方言別": "邵語"
     }
-  ]
+  ],
+  "village_dialects_overrides": {
+    "宜蘭縣|大同鄉|太平村": [
+      "四季泰雅語",
+      "宜蘭澤敖利泰雅語",
+      "都達語"
+    ],
+    "_note": "Manual overrides for villages that are indigenous areas but missing from the source XLSX (e.g. unpopulated forest villages). Key = county|township|village, value = list of dialect names."
+  }
 }
