@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Settings, Globe, ChevronDown } from 'lucide-react';
+import { useTranslation } from '../hooks/useTranslation';
 
 type Props = {
     isOpen: boolean;
@@ -59,6 +60,8 @@ const MapSettingsMenu: React.FC<Props> = ({
     language,
     setLanguage,
 }) => {
+    const { t } = useTranslation(language);
+
     return (
         <div
             className="relative self-start"
@@ -67,7 +70,7 @@ const MapSettingsMenu: React.FC<Props> = ({
         >
             <button className="p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 transition-all text-stone-600 flex items-center gap-2">
                 <Settings className={`w-5 h-5 ${isOpen ? 'rotate-90' : ''} transition-transform duration-300`} />
-                <span className="text-xs font-bold uppercase tracking-wider">地圖設定</span>
+                <span className="text-xs font-bold uppercase tracking-wider">{t('settings')}</span>
             </button>
 
             <AnimatePresence>
@@ -82,35 +85,34 @@ const MapSettingsMenu: React.FC<Props> = ({
                             {/* SECTION: Map Layers */}
                             <div>
                                 <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    邊界顯示
+                                    {t('boundaryDisplay')}
                                 </h3>
                                 <div className="space-y-3">
                                     <ToggleRow
-                                        label="縣市"
+                                        label={t('countyBorders')}
                                         value={showCountyBorders}
                                         onToggle={() => setShowCountyBorders(!showCountyBorders)}
                                     />
                                     <ToggleRow
-                                        label="鄉鎮"
+                                        label={t('townshipContours')}
                                         value={showTownshipContours}
                                         onToggle={() => setShowTownshipContours(!showTownshipContours)}
                                     />
                                     <ToggleRow
-                                        label="村里"
+                                        label={t('villageBorders')}
                                         value={showVillageBorders}
                                         onToggle={() => setShowVillageBorders(!showVillageBorders)}
                                     />
                                     <ToggleRow
-                                        label="著色模式"
+                                        label={t('boundaryDisplay')}
                                         value={showVillageColors}
                                         onToggle={() => setShowVillageColors(!showVillageColors)}
-                                        sublabel="開啟以顯示村里著色"
+                                        sublabel={t('villageColors')}
                                     />
                                     <ToggleRow
-                                        label="多重族語"
+                                        label={t('sharedDialects')}
                                         value={showSharedDialects}
                                         onToggle={() => setShowSharedDialects(!showSharedDialects)}
-                                        sublabel="當多族語重疊時分區著色"
                                     />
                                 </div>
                             </div>
@@ -118,21 +120,21 @@ const MapSettingsMenu: React.FC<Props> = ({
                             {/* SECTION: Area Names */}
                             <div className="pt-2 border-t border-stone-100">
                                 <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    地名標註
+                                    {t('areaNames')}
                                 </h3>
                                 <div className="space-y-3">
                                     <ToggleRow
-                                        label="縣市"
+                                        label={t('level1Names')}
                                         value={showLvl1Names}
                                         onToggle={() => setShowLvl1Names(!showLvl1Names)}
                                     />
                                     <ToggleRow
-                                        label="鄉鎮"
+                                        label={t('level2Names')}
                                         value={showLvl2Names}
                                         onToggle={() => setShowLvl2Names(!showLvl2Names)}
                                     />
                                     <ToggleRow
-                                        label="村里"
+                                        label={t('level3Names')}
                                         value={showLvl3Names}
                                         onToggle={() => setShowLvl3Names(!showLvl3Names)}
                                     />
@@ -142,11 +144,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                             {/* SECTION: UI Options */}
                             <div className="pt-2 border-t border-stone-100">
                                 <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    介面設定
+                                    {t('boundaryDisplay')}
                                 </h3>
                                 <div className="space-y-3">
                                     <ToggleRow
-                                        label="固定資訊欄"
+                                        label={t('showFixedInfo')}
                                         value={showFixedInfo}
                                         onToggle={() => setShowFixedInfo(!showFixedInfo)}
                                     />
@@ -163,7 +165,7 @@ const MapSettingsMenu: React.FC<Props> = ({
                                                 className="w-full appearance-none bg-stone-100 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-stone-700 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all pr-10 hover:bg-stone-200"
                                             >
                                                 <option value="zh">繁體中文</option>
-                                                <option value="en">English (Coming Soon)</option>
+                                                <option value="en">English</option>
                                             </select>
                                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none group-hover/select:text-stone-600 transition-colors" />
                                         </div>

@@ -16,7 +16,9 @@ type Props = {
     onShowMore: () => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
+    language: 'zh' | 'en';
 };
+import { useTranslation } from '../hooks/useTranslation';
 
 const CursorTooltip: React.FC<Props> = ({
     hoveredTown,
@@ -29,7 +31,9 @@ const CursorTooltip: React.FC<Props> = ({
     onShowMore,
     onMouseEnter,
     onMouseLeave,
+    language,
 }) => {
+    const { t, mt } = useTranslation(language);
     const population = React.useMemo(() => {
         const key = `${hoveredLabel.county}|${hoveredLabel.town}|${hoveredLabel.village || ''}`;
         return populationMap[key] || populationMap[`${hoveredLabel.county}|${hoveredLabel.town}|`] || 0;
@@ -73,7 +77,7 @@ const CursorTooltip: React.FC<Props> = ({
                         <Info className="w-4 h-4 text-stone-300 hover:text-emerald-500 transition-colors cursor-help" />
                         <div className="absolute right-0 bottom-full mb-2 opacity-0 group-hover/pop:opacity-100 transition-opacity pointer-events-none translate-y-1 group-hover/pop:translate-y-0 duration-200">
                             <div className="bg-stone-900 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-xl whitespace-nowrap font-bold flex flex-col gap-0.5">
-                                <span className="text-stone-400 uppercase tracking-widest text-[8px]">區域人口</span>
+                                <span className="text-stone-400 uppercase tracking-widest text-[8px]">{t('population')}</span>
                                 <span className="text-emerald-400 font-mono text-sm">{population > 0 ? population.toLocaleString() : '---'}</span>
                             </div>
                             <div className="w-2 h-2 bg-stone-900 rotate-45 absolute -bottom-1 right-2" />
@@ -82,7 +86,7 @@ const CursorTooltip: React.FC<Props> = ({
 
                     <div className="mt-4 space-y-3">
                         <div className="border-t border-stone-100 pt-3">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-1.5">分佈族語</span>
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-1.5">{t('dialectsInArea')}</span>
                             <div className="flex flex-wrap gap-1.5">
                                 {hoveredDialects.length ? (
                                     hoveredDialects.map((d) => (
@@ -91,11 +95,11 @@ const CursorTooltip: React.FC<Props> = ({
                                             className="px-3 py-1.5 rounded-lg text-lg font-bold shadow-sm"
                                             style={getPillStyle(getDialectColor(d))}
                                         >
-                                            {d}
+                                            {mt(d)}
                                         </span>
                                     ))
                                 ) : (
-                                    <span className="text-sm text-stone-400 italic">無特定數據</span>
+                                    <span className="text-sm text-stone-400 italic">{language === 'zh' ? '無特定數據' : 'No data'}</span>
                                 )}
                             </div>
                         </div>
@@ -108,7 +112,7 @@ const CursorTooltip: React.FC<Props> = ({
                                     onShowMore();
                                 }}
                             >
-                                例句 & 文化 →
+                                {language === 'zh' ? '例句 & 文化 →' : 'Learning & Culture →'}
                             </button>
                         </div>
                     </div>

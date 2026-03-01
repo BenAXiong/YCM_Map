@@ -13,6 +13,7 @@ import MapSettingsMenu from './MapSettingsMenu';
 import CursorTooltip from './CursorTooltip';
 import FixedInfoPanel from './FixedInfoPanel';
 import MapLegend from './MapLegend';
+import { useTranslation } from '../hooks/useTranslation';
 
 const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
@@ -98,6 +99,7 @@ const TaiwanMap: React.FC = () => {
   // --- Detail state ---
   const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
   const [isDetailPinned, setIsDetailPinned] = useState(false);
+  const { t } = useTranslation(language);
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -245,7 +247,7 @@ const TaiwanMap: React.FC = () => {
         link.click();
       } catch (err) {
         console.error('Export failed:', err);
-        alert('匯出失敗，請重試');
+        alert(t('exportFailed'));
       } finally {
         setIsExporting(false);
       }
@@ -275,8 +277,8 @@ const TaiwanMap: React.FC = () => {
 
   const handleShare = async () => {
     const shareData = {
-      title: '臺灣族語分佈地圖',
-      text: '快來看看臺灣原住民族語的分佈地圖！',
+      title: t('title'),
+      text: t('shareText'),
       url: window.location.href,
     };
 
@@ -285,7 +287,7 @@ const TaiwanMap: React.FC = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        alert('網址已複製到剪貼簿！');
+        alert(t('urlCopied'));
       }
     } catch (err) {
       console.error('Share failed:', err);
@@ -355,10 +357,9 @@ const TaiwanMap: React.FC = () => {
                   className="flex flex-col"
                 >
                   <h1 className="text-lg md:text-2xl font-bold text-stone-900 tracking-tight whitespace-nowrap">
-                    以~
-                    {/* 臺灣族語分佈地圖 */}
+                    {t('title')}
                   </h1>
-                  <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">Taiwan Indigenous Languages Distribution</p>
+                  <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">{t('subtitle')}</p>
                 </motion.div>
               )}
             </div>
@@ -368,11 +369,11 @@ const TaiwanMap: React.FC = () => {
                 animate={{ height: 'auto', opacity: 1 }}
                 className="mt-3 pt-3 border-t border-stone-100"
               >
-                {loading && <p className="text-[10px] text-stone-400">正在載入地理數據...</p>}
+                {loading && <p className="text-[10px] text-stone-400">{t('loadingData')}</p>}
                 {error && <p className="text-[10px] text-red-500">{error}</p>}
               </motion.div>
             )}
-            {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">Loading topojson…</p>}
+            {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">{t('loadingData')}</p>}
             {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
           </motion.div>
 
@@ -403,41 +404,41 @@ const TaiwanMap: React.FC = () => {
 
           <button
             onClick={() => canvasRef.current?.resetZoom()}
-            title="Reset zoom"
+            title={t('resetZoom')}
             className={`p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit ${isExporting ? 'hidden' : ''}`}
           >
             <RotateCcw className="w-4 h-4" />
-            <span className="hidden md:inline">重設縮放</span>
+            <span className="hidden md:inline">{t('resetZoom')}</span>
           </button>
 
           <div className={`flex items-center gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
             <button
               onClick={handleExport}
               disabled={isExporting}
-              title="Export as PNG"
+              title={t('exportImage')}
               className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit disabled:opacity-50"
             >
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
-              <span className="hidden md:inline">匯出圖片</span>
+              <span className="hidden md:inline">{t('exportImage')}</span>
             </button>
 
             <button
               onClick={handleShare}
-              title="Share"
+              title={t('share')}
               className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
             >
               <Share2 className="w-4 h-4" />
-              <span className="hidden md:inline">分享</span>
+              <span className="hidden md:inline">{t('share')}</span>
             </button>
 
             {deferredPrompt && (
               <button
                 onClick={handleInstallApp}
-                title="Install App"
+                title={t('installApp')}
                 className="p-3 bg-orange-50/80 backdrop-blur-md rounded-2xl shadow-sm border border-orange-200 hover:bg-orange-100/90 active:scale-95 transition-all flex items-center gap-2 text-orange-700 font-bold text-sm w-fit animate-pulse"
               >
                 <Smartphone className="w-4 h-4" />
-                <span className="hidden md:inline">安裝 App</span>
+                <span className="hidden md:inline">{t('installApp')}</span>
               </button>
             )}
           </div>
@@ -478,12 +479,17 @@ const TaiwanMap: React.FC = () => {
             return;
           }
 
+          const { county, town, village } = getCountyTownVillageFromProps(props);
+          const dialectsArray = (showVillageColors && village)
+            ? getVillageDialects(county, town, village)
+            : getDialects(county, town);
+
           if (isMobile) {
-            // Mobile step 1: tap to show tooltip
+            // Mobile step 1: tap to show tooltip AND highlight dialects
             const sameArea = hoveredTown &&
-              getCountyTownVillageFromProps(hoveredTown).county === getCountyTownVillageFromProps(props).county &&
-              getCountyTownVillageFromProps(hoveredTown).town === getCountyTownVillageFromProps(props).town &&
-              getCountyTownVillageFromProps(hoveredTown).village === getCountyTownVillageFromProps(props).village;
+              getCountyTownVillageFromProps(hoveredTown).county === county &&
+              getCountyTownVillageFromProps(hoveredTown).town === town &&
+              getCountyTownVillageFromProps(hoveredTown).village === village;
 
             if (sameArea && !isDetailPinned) {
               // If already showing tooltip, tap again to pin (Step 2)
@@ -491,17 +497,22 @@ const TaiwanMap: React.FC = () => {
               return;
             }
 
+            // Highlight dialects on first tap
+            if (dialectsArray.length) {
+              setSelectedDialects((prev) => {
+                const next = new Set(prev);
+                dialectsArray.forEach((x) => next.add(x)); // On mobile, maybe just add? Or toggle? 
+                // Let's stick to adding/highlighting for now to avoid confusion on first tap
+                return next;
+              });
+            }
+
             setHoveredTown(props);
             if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
-            // Do NOT setIsDetailPinned(true) immediately on mobile
             return;
           }
 
-          const { county, town, village } = getCountyTownVillageFromProps(props);
-          const dialectsArray = (showVillageColors && village)
-            ? getVillageDialects(county, town, village)
-            : getDialects(county, town);
-
+          // Desktop logic: Toggle dialects and Pin immediately
           if (dialectsArray.length) {
             setSelectedDialects((prev) => {
               const next = new Set(prev);
@@ -547,6 +558,7 @@ const TaiwanMap: React.FC = () => {
         searchResults={searchResults}
         onSelectTownship={handleTownshipSelect}
         getDialectColor={getDialectColor}
+        language={language}
       />
 
       <CursorTooltip
@@ -560,6 +572,7 @@ const TaiwanMap: React.FC = () => {
         onShowMore={() => setIsDetailPinned(true)}
         onMouseEnter={() => { }}
         onMouseLeave={() => { }}
+        language={language}
       />
 
       {/* Pinned / Fixed Panel at Top Right */}
@@ -578,6 +591,7 @@ const TaiwanMap: React.FC = () => {
             setIsDetailPinned(false);
             if (!showFixedInfo) setHoveredTown(null);
           }}
+          language={language}
         />
       </div>
 
@@ -589,6 +603,7 @@ const TaiwanMap: React.FC = () => {
           selectedDialects={selectedDialects}
           languageGroups={languageGroups}
           getDialectColor={getDialectColor}
+          language={language}
         />
       </div>
     </div>

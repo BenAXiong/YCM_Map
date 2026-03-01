@@ -26,7 +26,9 @@ type Props = {
 
     // coloring for dialect chips
     getDialectColor: (dialect: string) => string;
+    language: 'zh' | 'en';
 };
+import { useTranslation } from '../hooks/useTranslation';
 
 const DialectFilterPanel: React.FC<Props> = ({
     isMobile,
@@ -46,7 +48,9 @@ const DialectFilterPanel: React.FC<Props> = ({
     searchResults,
     onSelectTownship,
     getDialectColor,
+    language,
 }) => {
+    const { t, mt } = useTranslation(language);
     const toggleGroup = (lang: string) => {
         setExpandedGroups((prev) => {
             const next = new Set(prev);
@@ -73,7 +77,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-xl font-bold flex items-center gap-2 text-stone-900">
                                     <Filter className="w-5 h-5 text-emerald-600" />
-                                    語言篩選
+                                    {t('filterLanguages')}
                                 </h2>
                                 <div className="flex items-center gap-1.5">
                                     {isMobile && (
@@ -82,13 +86,13 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                 onClick={onSelectAll}
                                                 className="px-3 py-2 bg-emerald-50 text-emerald-600 text-[15px] font-black tracking-widest uppercase rounded-lg active:bg-emerald-100 transition-colors"
                                             >
-                                                全選
+                                                {t('selectAll')}
                                             </button>
                                             <button
                                                 onClick={onClearAll}
                                                 className="px-3 py-2 bg-stone-100 text-stone-500 text-[15px] font-black tracking-widest uppercase rounded-lg active:bg-stone-200 transition-colors"
                                             >
-                                                清除
+                                                {t('clearAll')}
                                             </button>
                                         </>
                                     )}
@@ -108,7 +112,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="搜尋鄉鎮市或族語..."
+                                    placeholder={t('searchPlaceholder')}
                                     value={searchTerm}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                                     className="w-full pl-11 pr-4 py-3 bg-stone-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
@@ -144,13 +148,13 @@ const DialectFilterPanel: React.FC<Props> = ({
                                         onClick={onSelectAll}
                                         className="flex-1 py-3 px-4 bg-emerald-600 text-white text-[10px] font-black tracking-widest uppercase rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
                                     >
-                                        全選
+                                        {t('selectAll')}
                                     </button>
                                     <button
                                         onClick={onClearAll}
                                         className="flex-1 py-3 px-4 bg-stone-100 text-stone-600 text-[10px] font-black tracking-widest uppercase rounded-xl hover:bg-stone-200 transition-colors"
                                     >
-                                        清除
+                                        {t('clearAll')}
                                     </button>
                                 </div>
                             )}
@@ -191,9 +195,11 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                 </button>
 
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-sm text-stone-800">{lang}</span>
+                                                    <span className="font-bold text-sm text-stone-800">{mt(lang)}</span>
                                                     {someSelected && !expandedGroups.has(lang) && (
-                                                        <span className="text-[10px] text-emerald-600 font-bold">已選 {dialectsArray.filter(d => selectedDialects.has(d)).length} 類</span>
+                                                        <span className="text-[10px] text-emerald-600 font-bold">
+                                                            {language === 'zh' ? '已選' : 'Selected'} {dialectsArray.filter(d => selectedDialects.has(d)).length} {language === 'zh' ? '類' : 'types'}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
@@ -239,7 +245,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                             >
                                                                 {selected && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                                                             </div>
-                                                            <span className={`text-sm ${selected ? 'font-bold text-stone-900' : 'text-stone-600'}`}>{dialect}</span>
+                                                            <span className={`text-sm ${selected ? 'font-bold text-stone-900' : 'text-stone-600'}`}>{mt(dialect)}</span>
                                                         </div>
                                                     );
                                                 })}
@@ -257,7 +263,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                     onClick={() => setIsOpen(false)}
                                     className="w-full py-4 bg-emerald-600 text-white font-black tracking-widest uppercase rounded-[1.5rem] shadow-xl hover:bg-emerald-700 transition-all active:scale-[0.98]"
                                 >
-                                    確定
+                                    {language === 'zh' ? '確定' : 'OK'}
                                 </button>
                             </div>
                         )}
@@ -276,12 +282,12 @@ const DialectFilterPanel: React.FC<Props> = ({
                     {isMobile ? (
                         <>
                             <ChevronUp className="w-4 h-4 text-emerald-600" />
-                            語言篩選
+                            {t('filterLanguages')}
                         </>
                     ) : (
                         <>
                             <Filter className="w-4 h-4 text-emerald-600" />
-                            顯示篩選面板
+                            {language === 'zh' ? '顯示篩選面板' : 'Show Filter Panel'}
                             <ChevronLeft className="w-4 h-4 text-stone-400" />
                         </>
                     )}

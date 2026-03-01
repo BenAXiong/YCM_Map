@@ -8,15 +8,19 @@ type Props = {
     selectedDialects: Set<string>;
     languageGroups: Record<string, string[]>;
     getDialectColor: (dialect: string) => string;
+    language: 'zh' | 'en';
 };
+import { useTranslation } from '../hooks/useTranslation';
 
 const MapLegend: React.FC<Props> = ({
     isMobile = false,
     alwaysExpanded = false,
     selectedDialects,
     languageGroups,
-    getDialectColor
+    getDialectColor,
+    language,
 }) => {
+    const { t, mt } = useTranslation(language);
     const [isExpanded, setIsExpanded] = useState(!isMobile);
 
     useEffect(() => {
@@ -63,7 +67,7 @@ const MapLegend: React.FC<Props> = ({
                                 <ListFilter className="w-4 h-4 text-emerald-600" />
                             </div>
                         )}
-                        <span className={`${isMobile && !effectiveExpanded ? 'font-black tracking-widest uppercase text-xs text-stone-900' : `font-bold text-stone-800 ${isMobile ? 'text-xs' : 'text-sm'}`}`}>圖例</span>
+                        <span className={`${isMobile && !effectiveExpanded ? 'font-black tracking-widest uppercase text-xs text-stone-900' : `font-bold text-stone-800 ${isMobile ? 'text-xs' : 'text-sm'}`}`}>{t('legend')}</span>
                     </div>
                     {!alwaysExpanded && (
                         <motion.div
@@ -86,7 +90,7 @@ const MapLegend: React.FC<Props> = ({
                         {activeLanguages.map(({ lang, dialects }) => (
                             <div key={lang} className="flex flex-col">
                                 <span className="text-[16px] font-black text-stone-800 uppercase tracking-widest mb-2">
-                                    {lang}
+                                    {mt(lang)}
                                 </span>
                                 <div className="flex flex-col gap-2 pl-3 border-l-2 border-stone-100">
                                     {dialects.map((dialect) => (
@@ -95,8 +99,8 @@ const MapLegend: React.FC<Props> = ({
                                                 className="w-3 h-3 rounded-full shadow-sm shrink-0 border border-white/50"
                                                 style={{ backgroundColor: getDialectColor(dialect) }}
                                             />
-                                            <span className="text-[14px] font-medium text-stone-600 truncate" title={dialect}>
-                                                {dialect}
+                                            <span className="text-[14px] font-medium text-stone-600 truncate" title={mt(dialect)}>
+                                                {mt(dialect)}
                                             </span>
                                         </div>
                                     ))}

@@ -1,8 +1,9 @@
 CORE
-english!!!
+improve english translation of dialects
 title?
+analytics
 reorder dialects
-optimize loading?
+?optimize loading
 
 UI
 enable single area coloring vs shared dialects vs shared language

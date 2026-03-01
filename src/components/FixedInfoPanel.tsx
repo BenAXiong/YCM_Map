@@ -16,7 +16,9 @@ type Props = {
     selectedDialect: string | null;
     onSelectDialect: (d: string) => void;
     onClose?: () => void;
+    language: 'zh' | 'en';
 };
+import { useTranslation } from '../hooks/useTranslation';
 
 const FixedInfoPanel: React.FC<Props> = ({
     hoveredTown,
@@ -27,7 +29,9 @@ const FixedInfoPanel: React.FC<Props> = ({
     selectedDialect,
     onSelectDialect,
     onClose,
+    language,
 }) => {
+    const { t, mt } = useTranslation(language);
     return (
         <AnimatePresence>
             {showFixedInfo && hoveredTown && (
@@ -63,7 +67,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                         {/* Dialect Tabs + Phrases */}
                         {hoveredDialects.length > 0 && (
                             <div className="flex flex-col flex-1 overflow-hidden">
-                                <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-2">常用詞彙</span>
+                                <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-2">{language === 'zh' ? '常用詞彙' : 'Common Phrases'}</span>
 
                                 <div className="flex flex-wrap gap-1 mb-3">
                                     {hoveredDialects.map((d) => {
@@ -84,7 +88,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                                                     textShadow: isActive ? '0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black' : 'none'
                                                 }}
                                             >
-                                                {d}
+                                                {mt(d)}
                                             </button>
                                         );
                                     })}
@@ -110,7 +114,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                                                 <span className="text-[9px] text-stone-400 font-medium uppercase tracking-widest">{p.en}</span>
                                             </div>
                                             <div className="text-sm font-medium text-stone-800 leading-snug">
-                                                [{selectedDialect || 'Select a dialect'} placeholder]
+                                                [{mt(selectedDialect || '') || (language === 'zh' ? '選擇一個族語' : 'Select a dialect')} placeholder]
                                             </div>
                                         </div>
                                     ))}
@@ -120,7 +124,7 @@ const FixedInfoPanel: React.FC<Props> = ({
 
                         {!hoveredDialects.length && (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
-                                <span className="text-sm text-stone-400 font-medium">無特定族語分佈數據</span>
+                                <span className="text-sm text-stone-400 font-medium">{language === 'zh' ? '無特定族語分佈數據' : 'No dialect data for this area'}</span>
                             </div>
                         )}
                     </div>
