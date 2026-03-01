@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Map as MapIcon, RotateCcw } from 'lucide-react';
+import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { toPng } from 'html-to-image';
 import { getDialectColor } from './dialectColors';
 
 import { useTaiwanTopo } from '../hooks/useTaiwanTopo';
@@ -15,6 +16,7 @@ import MapLegend from './MapLegend';
 
 const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const [hoveredTown, setHoveredTown] = useState<any>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
@@ -77,6 +79,7 @@ const TaiwanMap: React.FC = () => {
   const [isDetailPinned, setIsDetailPinned] = useState(false);
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -180,6 +183,57 @@ const TaiwanMap: React.FC = () => {
   };
   const clearAll = () => setSelectedDialects(new Set());
 
+  const handleExport = async () => {
+    if (!mapContainerRef.current) return;
+    setIsExporting(true);
+
+    // Brief delay to allow React to hide elements and expand legend
+    setTimeout(async () => {
+      try {
+        const dataUrl = await toPng(mapContainerRef.current!, {
+          backgroundColor: '#e7e5e4', // stone-200
+          quality: 0.95,
+          pixelRatio: 2,
+          filter: (node) => {
+            // Further safety check if needed, though state is primary
+            const el = node as HTMLElement;
+            if (el.classList?.contains('export-hide')) return false;
+            return true;
+          }
+        });
+
+        const link = document.createElement('a');
+        link.download = `taiwan-dialects-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Export failed:', err);
+        alert('匯出失敗，請重試');
+      } finally {
+        setIsExporting(false);
+      }
+    }, 500);
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: '臺灣族語分佈地圖',
+      text: '快來看看臺灣原住民族語的分佈地圖！',
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('網址已複製到剪貼簿！');
+      }
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  };
+
   const hoveredLabel = useMemo(() => {
     if (!hoveredTown) return { county: '', town: '', village: '' };
     return getCountyTownVillageFromProps(hoveredTown);
@@ -203,9 +257,12 @@ const TaiwanMap: React.FC = () => {
   }, [hoveredTown, hoveredDialects, selectedDetailDialect]);
 
   return (
-    <div className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans">
+    <div
+      ref={mapContainerRef}
+      className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans"
+    >
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-4 md:p-6 flex justify-between items-start pointer-events-none">
+      <header className={`absolute top-0 left-0 right-0 z-30 p-4 md:p-6 flex justify-between items-start pointer-events-none transition-opacity duration-300 ${isExporting ? 'opacity-0' : 'opacity-100'}`}>
         <div className="flex flex-col gap-3 pointer-events-auto max-w-[80vw]">
           <motion.div
             layout
@@ -281,11 +338,32 @@ const TaiwanMap: React.FC = () => {
           <button
             onClick={() => canvasRef.current?.resetZoom()}
             title="Reset zoom"
-            className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
+            className={`p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit ${isExporting ? 'hidden' : ''}`}
           >
             <RotateCcw className="w-4 h-4" />
-            重設縮放
+            <span className="hidden md:inline">重設縮放</span>
           </button>
+
+          <div className={`flex items-center gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              title="Export as PNG"
+              className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit disabled:opacity-50"
+            >
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
+              <span className="hidden md:inline">匯出圖片</span>
+            </button>
+
+            <button
+              onClick={handleShare}
+              title="Share"
+              className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden md:inline">分享</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -372,7 +450,7 @@ const TaiwanMap: React.FC = () => {
       {/* Filters */}
       <DialectFilterPanel
         isMobile={isMobile}
-        isOpen={isFilterOpen}
+        isOpen={isFilterOpen && !isExporting}
         setIsOpen={setIsFilterOpen}
         languageGroups={languageGroups}
         populationMap={populationMap}
@@ -406,7 +484,7 @@ const TaiwanMap: React.FC = () => {
 
       {/* Pinned / Fixed Panel at Top Right */}
       <div
-        className={`fixed top-6 right-6 z-40 pointer-events-none transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'}`}
+        className={`fixed top-6 right-6 z-40 pointer-events-none transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'} ${isExporting ? 'hidden' : ''}`}
       >
         <FixedInfoPanel
           hoveredTown={hoveredTown}
@@ -426,6 +504,7 @@ const TaiwanMap: React.FC = () => {
       <div className="absolute bottom-8 left-6 z-10 pointer-events-none flex flex-col gap-4">
         <MapLegend
           isMobile={isMobile}
+          alwaysExpanded={isExporting}
 
           selectedDialects={selectedDialects}
           languageGroups={languageGroups}

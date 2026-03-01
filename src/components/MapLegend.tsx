@@ -4,17 +4,30 @@ import { ChevronUp, ListFilter } from 'lucide-react';
 
 type Props = {
     isMobile?: boolean;
+    alwaysExpanded?: boolean;
     selectedDialects: Set<string>;
     languageGroups: Record<string, string[]>;
     getDialectColor: (dialect: string) => string;
 };
 
-const MapLegend: React.FC<Props> = ({ isMobile = false, selectedDialects, languageGroups, getDialectColor }) => {
+const MapLegend: React.FC<Props> = ({
+    isMobile = false,
+    alwaysExpanded = false,
+    selectedDialects,
+    languageGroups,
+    getDialectColor
+}) => {
     const [isExpanded, setIsExpanded] = useState(!isMobile);
 
     useEffect(() => {
-        setIsExpanded(!isMobile);
-    }, [isMobile]);
+        if (alwaysExpanded) {
+            setIsExpanded(true);
+        } else {
+            setIsExpanded(!isMobile);
+        }
+    }, [isMobile, alwaysExpanded]);
+
+    const effectiveExpanded = alwaysExpanded || isExpanded;
 
     // Determine which languages should be displayed
     const activeLanguages: Array<{ lang: string; dialects: string[] }> = [];
@@ -34,35 +47,38 @@ const MapLegend: React.FC<Props> = ({ isMobile = false, selectedDialects, langua
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className={`bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 ${isExpanded ? 'w-64 md:w-72' : 'w-fit'} max-h-[70vh] flex flex-col pointer-events-auto overflow-hidden transition-all duration-300`}
+                className={`bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 ${effectiveExpanded ? 'w-64 md:w-72' : 'w-fit'} max-h-[70vh] flex flex-col pointer-events-auto overflow-hidden transition-all duration-300`}
             >
                 {/* Header / Minimized State */}
                 <button
+                    disabled={alwaysExpanded}
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className={`flex items-center justify-between ${isMobile && !isExpanded ? 'px-5 h-12' : isMobile ? 'p-3' : 'p-4'} w-full hover:bg-stone-50 transition-colors`}
+                    className={`flex items-center justify-between ${isMobile && !effectiveExpanded ? 'px-5 h-12' : isMobile ? 'p-3' : 'p-4'} w-full ${alwaysExpanded ? 'cursor-default' : 'hover:bg-stone-50'} transition-colors`}
                 >
                     <div className="flex items-center gap-3">
-                        {isMobile && !isExpanded ? (
+                        {isMobile && !effectiveExpanded ? (
                             <ListFilter className="w-4 h-4 text-emerald-600" />
                         ) : (
                             <div className={`${isMobile ? 'p-1' : 'p-1.5'} bg-emerald-50 rounded-lg`}>
                                 <ListFilter className="w-4 h-4 text-emerald-600" />
                             </div>
                         )}
-                        <span className={`${isMobile && !isExpanded ? 'font-black tracking-widest uppercase text-xs text-stone-900' : `font-bold text-stone-800 ${isMobile ? 'text-xs' : 'text-sm'}`}`}>圖例</span>
+                        <span className={`${isMobile && !effectiveExpanded ? 'font-black tracking-widest uppercase text-xs text-stone-900' : `font-bold text-stone-800 ${isMobile ? 'text-xs' : 'text-sm'}`}`}>圖例</span>
                     </div>
-                    <motion.div
-                        animate={{ rotate: isExpanded ? 180 : 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                        <ChevronUp className="w-4 h-4 text-emerald-600" />
-                    </motion.div>
+                    {!alwaysExpanded && (
+                        <motion.div
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        >
+                            <ChevronUp className="w-4 h-4 text-emerald-600" />
+                        </motion.div>
+                    )}
                 </button>
 
                 {/* Content */}
                 <motion.div
                     initial={false}
-                    animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
+                    animate={{ height: effectiveExpanded ? 'auto' : 0, opacity: effectiveExpanded ? 1 : 0 }}
                     className="overflow-hidden"
                 >
                     <div className="p-4 pt-0 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">

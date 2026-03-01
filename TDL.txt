@@ -1,8 +1,11 @@
 CORE
+add names and hide toggles
+reorder toggles
+check selection persistence
 deal with overlaps
-export view png (share?)
+english!!!
 title?
-clickmode: higlight all shared lang or others?
+reorder dialects
 optimize loading?
 
 UI
@@ -10,6 +13,7 @@ add "about" overlay
 grey out no info areas
 filter avoid wiggle when scroll bar activates
 match mobile language colors in filter with pc (and order)
+click on legend item to highlight area
 
 EXTRA
 population data of each division (yes, even li/cun ifpossible)

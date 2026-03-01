@@ -69,11 +69,6 @@ const MapSettingsMenu: React.FC<Props> = ({
                                 onToggle={() => setShowCountyBorders(!showCountyBorders)}
                             />
                             <ToggleRow
-                                label="固定資訊面板"
-                                value={showFixedInfo}
-                                onToggle={() => setShowFixedInfo(!showFixedInfo)}
-                            />
-                            <ToggleRow
                                 label="顯示鄉鎮邊界"
                                 value={showTownshipContours}
                                 onToggle={() => setShowTownshipContours(!showTownshipContours)}
@@ -84,6 +79,10 @@ const MapSettingsMenu: React.FC<Props> = ({
                                 onToggle={() => setShowVillageBorders(!showVillageBorders)}
                             />
                             <ToggleRow
+                                label="固定資訊面板"
+                                value={showFixedInfo}
+                                onToggle={() => setShowFixedInfo(!showFixedInfo)}
+                            />                            <ToggleRow
                                 label="村里著色模式"
                                 value={showVillageColors}
                                 onToggle={() => setShowVillageColors(!showVillageColors)}
