@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2 } from 'lucide-react';
+import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2, Smartphone } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toPng } from 'html-to-image';
 import { getDialectColor } from './dialectColors';
@@ -252,6 +252,27 @@ const TaiwanMap: React.FC = () => {
     }, 500);
   };
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   const handleShare = async () => {
     const shareData = {
       title: '臺灣族語分佈地圖',
@@ -408,6 +429,17 @@ const TaiwanMap: React.FC = () => {
               <Share2 className="w-4 h-4" />
               <span className="hidden md:inline">分享</span>
             </button>
+
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallApp}
+                title="Install App"
+                className="p-3 bg-orange-50/80 backdrop-blur-md rounded-2xl shadow-sm border border-orange-200 hover:bg-orange-100/90 active:scale-95 transition-all flex items-center gap-2 text-orange-700 font-bold text-sm w-fit animate-pulse"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span className="hidden md:inline">安裝 App</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
