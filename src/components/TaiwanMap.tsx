@@ -305,20 +305,39 @@ const TaiwanMap: React.FC = () => {
         getVillageDialects={getVillageDialects}
         getCountyTownVillageFromProps={getCountyTownVillageFromProps}
         onHover={(props, x, y) => {
+          if (isMobile) return; // Mobile uses onClick for tooltip
           if (!isDetailPinned) {
-            // Add a small delay/grace period via state is already handled by standard React state, 
-            // but we can ensure the move logic is smooth.
             setHoveredTown(props);
           }
           setTooltipPos({ x, y });
         }}
         onLeave={() => {
+          if (isMobile) return;
           if (!isDetailPinned) setHoveredTown(null);
         }}
-        onClickTown={(props) => {
+        onClickTown={(props, x, y) => {
           if (!props) {
             setIsDetailPinned(false);
             setHoveredTown(null);
+            return;
+          }
+
+          if (isMobile) {
+            // Mobile step 1: tap to show tooltip
+            const sameArea = hoveredTown &&
+              getCountyTownVillageFromProps(hoveredTown).county === getCountyTownVillageFromProps(props).county &&
+              getCountyTownVillageFromProps(hoveredTown).town === getCountyTownVillageFromProps(props).town &&
+              getCountyTownVillageFromProps(hoveredTown).village === getCountyTownVillageFromProps(props).village;
+
+            if (sameArea && !isDetailPinned) {
+              // If already showing tooltip, tap again to pin (Step 2)
+              setIsDetailPinned(true);
+              return;
+            }
+
+            setHoveredTown(props);
+            if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
+            // Do NOT setIsDetailPinned(true) immediately on mobile
             return;
           }
 

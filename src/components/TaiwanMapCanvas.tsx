@@ -27,7 +27,7 @@ type Props = {
     // Interaction callbacks
     onHover: (props: any, clientX: number, clientY: number) => void;
     onLeave: () => void;
-    onClickTown: (props: any) => void;
+    onClickTown: (props: any, clientX?: number, clientY?: number) => void;
     onClickBackground?: () => void;
 };
 
@@ -206,7 +206,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
             svg.selectAll('*').remove();
 
-            const scale = height * 15;
+            const scale = height * 14;
             const projection = d3
                 .geoMercator()
                 .center([120.9, 23.65])
@@ -261,9 +261,9 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         stateRef.current.onLeave();
                         d3.select(event.currentTarget).attr('stroke', 'none');
                     })
-                    .on('click', (_event: any, d: any) => {
+                    .on('click', (event: any, d: any) => {
                         if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
-                        stateRef.current.onClickTown(d.properties);
+                        stateRef.current.onClickTown(d.properties, event.clientX, event.clientY);
                     });
             }
 
@@ -303,15 +303,15 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         .attr('stroke', contour ? '#cbd5e1' : '#ffffff')
                         .attr('stroke-width', contour ? 0.5 : 0.3);
                 })
-                .on('click', function (_event: any, d: any) {
+                .on('click', function (event: any, d: any) {
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
-                    stateRef.current.onClickTown(d.properties);
+                    stateRef.current.onClickTown(d.properties, event.clientX, event.clientY);
                 });
 
             // Zoom
             const zoom = d3
                 .zoom<SVGSVGElement, unknown>()
-                .scaleExtent([1, 20])
+                .scaleExtent([0.5, 20])
                 .on('zoom', (event: any) => {
                     gVillagePolygons.attr('transform', event.transform);
                     gTownships.attr('transform', event.transform);

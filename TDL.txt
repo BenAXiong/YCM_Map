@@ -1,10 +1,9 @@
 CORE
-mobile: restablish show more tooltip
-mobile: fix inability to zoom out
 deal with overlaps
-clickmode: higlight all shared lang or others?
-optimize loading
+export view png (share?)
 title?
+clickmode: higlight all shared lang or others?
+optimize loading?
 
 UI
 add "about" overlay
