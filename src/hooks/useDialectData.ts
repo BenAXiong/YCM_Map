@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import bundle from '../data/原住民16族42方言分佈參考.bundle.json';
+import bundle from '../data/dialects.bundle.json';
 
 export type DialectEntry = { 族語: string; 方言別: string };
 

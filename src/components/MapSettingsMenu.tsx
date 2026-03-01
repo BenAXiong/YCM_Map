@@ -14,6 +14,12 @@ type Props = {
 
     showTownshipContours: boolean;
     setShowTownshipContours: (v: boolean) => void;
+
+    showVillageBorders: boolean;
+    setShowVillageBorders: (v: boolean) => void;
+
+    showVillageColors: boolean;
+    setShowVillageColors: (v: boolean) => void;
 };
 
 const MapSettingsMenu: React.FC<Props> = ({
@@ -25,6 +31,10 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowFixedInfo,
     showTownshipContours,
     setShowTownshipContours,
+    showVillageBorders,
+    setShowVillageBorders,
+    showVillageColors,
+    setShowVillageColors,
 }) => {
     return (
         <div
@@ -62,6 +72,16 @@ const MapSettingsMenu: React.FC<Props> = ({
                                 label="顯示鄉鎮邊界"
                                 value={showTownshipContours}
                                 onToggle={() => setShowTownshipContours(!showTownshipContours)}
+                            />
+                            <ToggleRow
+                                label="顯示村里邊界"
+                                value={showVillageBorders}
+                                onToggle={() => setShowVillageBorders(!showVillageBorders)}
+                            />
+                            <ToggleRow
+                                label="村里著色模式"
+                                value={showVillageColors}
+                                onToggle={() => setShowVillageColors(!showVillageColors)}
                             />
                         </div>
                     </motion.div>

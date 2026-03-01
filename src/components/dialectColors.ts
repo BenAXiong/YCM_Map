@@ -1,20 +1,58 @@
-export function getDialectColor(dialect: string) {
-    const colors = [
-        '#3b82f6',
-        '#ef4444',
-        '#10b981',
-        '#f59e0b',
-        '#8b5cf6',
-        '#ec4899',
-        '#06b6d4',
-        '#84cc16',
-        '#f97316',
-        '#6366f1',
-    ];
+import dialectsBundle from '../data/dialects.bundle.json';
 
-    let hash = 0;
-    for (let i = 0; i < dialect.length; i++) {
-        hash = dialect.charCodeAt(i) + ((hash << 5) - hash);
+/**
+ * Generates a stable color for a dialect based on its language group.
+ * Language -> Hue (Rainbow gradient)
+ * Dialect -> Lightness/Saturation variation
+ */
+export const getDialectColor = (dialectOrKey: string): string => {
+    // 1. Resolve full key (Language|Dialect)
+    let lang = '';
+    let dia = '';
+
+    if (dialectOrKey.includes('|')) {
+        [lang, dia] = dialectOrKey.split('|');
+    } else {
+        // If only dialect name is provided, find its language group
+        const groups = dialectsBundle.languageGroups;
+        for (const [l, dialects] of Object.entries(groups)) {
+            if (dialects.includes(dialectOrKey)) {
+                lang = l;
+                dia = dialectOrKey;
+                break;
+            }
+        }
     }
-    return colors[Math.abs(hash) % colors.length];
-}
+
+    // 2. Identify Language Index for Hue
+    const allLanguages = dialectsBundle.allLanguages;
+    const langIndex = allLanguages.indexOf(lang);
+
+    // Use a default hue if not found, otherwise spread 16 languages across 360 degrees
+    const hue = langIndex === -1 ? 0 : (langIndex * (360 / allLanguages.length)) % 360;
+
+    // 3. Identify Dialect Index within that language for Lightness/Saturation
+    const group = dialectsBundle.languageGroups[lang as keyof typeof dialectsBundle.languageGroups] || [];
+    const diaIndex = group.indexOf(dia);
+
+    // Default HSL: Base color at 50% lightness, 70% saturation
+    let s = 75;
+    let l = 50;
+
+    // Apply variations for dialects
+    if (diaIndex > 0) {
+        const variations = [
+            { l: 65, s: 85 }, // Lighter, vivid
+            { l: 35, s: 70 }, // Darker
+            { l: 50, s: 40 }, // Muted
+            { l: 75, s: 60 }, // Very light, soft
+            { l: 30, s: 40 }, // Deep, muted
+            { l: 55, s: 95 }, // Super vivid
+        ];
+        const v = variations[(diaIndex - 1) % variations.length];
+        l = v.l;
+        s = v.s;
+    }
+
+    return `hsl(${hue}, ${s}%, ${l}%)`;
+};

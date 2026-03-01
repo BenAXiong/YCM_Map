@@ -1,0 +1,167 @@
+{
+    "schema": "taiwan.admin.reforms.v1",
+    "note": "Maps historical administrative names used in source data (XLSX, PDFs) to current names used in TopoJSON (taiwan-atlas). The 22 current top-level divisions are: 臺北市, 新北市, 桃園市, 臺中市, 臺南市, 高雄市, 基隆市, 新竹市, 嘉義市, 新竹縣, 苗栗縣, 彰化縣, 南投縣, 雲林縣, 嘉義縣, 屏東縣, 宜蘭縣, 花蓮縣, 臺東縣, 澎湖縣, 金門縣, 連江縣.",
+    "township_renames": {
+        "_note": "Context-bound. Key = county (after county normalization), value = {old_township: new_township}. Only entries where the XLSX name differs from the TopoJSON name.",
+        "桃園市": {
+            "復興鄉": "復興區"
+        }
+    },
+    "reforms": [
+        {
+            "date": "2010-12-25",
+            "description": "五都升格 — 縣市合併，設立四個新直轄市",
+            "source": "行政院公告",
+            "note": "Townships/cities within newly merged special municipalities became 區 (districts).",
+            "mappings": [
+                {
+                    "old": "台北縣",
+                    "new": "新北市",
+                    "type": "county→special_municipality",
+                    "note": "台北縣升格為新北市"
+                },
+                {
+                    "old": "臺北縣",
+                    "new": "新北市",
+                    "type": "county→special_municipality",
+                    "note": "臺北縣升格為新北市 (正體字形)"
+                },
+                {
+                    "old": "台中縣",
+                    "new": "臺中市",
+                    "type": "county+city→special_municipality",
+                    "note": "台中縣與台中市合併升格"
+                },
+                {
+                    "old": "臺中縣",
+                    "new": "臺中市",
+                    "type": "county+city→special_municipality",
+                    "note": "臺中縣與臺中市合併升格 (正體字形)"
+                },
+                {
+                    "old": "台南縣",
+                    "new": "臺南市",
+                    "type": "county+city→special_municipality",
+                    "note": "台南縣與台南市合併升格"
+                },
+                {
+                    "old": "臺南縣",
+                    "new": "臺南市",
+                    "type": "county+city→special_municipality",
+                    "note": "臺南縣與臺南市合併升格 (正體字形)"
+                },
+                {
+                    "old": "高雄縣",
+                    "new": "高雄市",
+                    "type": "county+city→special_municipality",
+                    "note": "高雄縣與高雄市合併升格"
+                }
+            ]
+        },
+        {
+            "date": "2014-12-25",
+            "description": "桃園縣升格為直轄市",
+            "source": "行政院公告",
+            "mappings": [
+                {
+                    "old": "桃園縣",
+                    "new": "桃園市",
+                    "type": "county→special_municipality",
+                    "note": "桃園縣升格為桃園市"
+                }
+            ]
+        },
+        {
+            "date": null,
+            "description": "正異體字統一 (orthographic normalization, not an administrative reform)",
+            "note": "台/臺 variant. Both forms appear in government documents depending on era and publisher. These are NOT renames — the places are identical. Applied AFTER reform mappings, so these only cover names unchanged by reform (e.g. 臺北市, 臺東縣, etc.).",
+            "mappings": [
+                {
+                    "old": "台灣",
+                    "new": "臺灣",
+                    "type": "orthographic"
+                },
+                {
+                    "old": "台北市",
+                    "new": "臺北市",
+                    "type": "orthographic",
+                    "note": "臺北市was already a special municipality since 1967, name unchanged by 2010 reform"
+                },
+                {
+                    "old": "台中市",
+                    "new": "臺中市",
+                    "type": "orthographic",
+                    "note": "Covers post-2010 new 臺中市 written with 台"
+                },
+                {
+                    "old": "台南市",
+                    "new": "臺南市",
+                    "type": "orthographic",
+                    "note": "Covers post-2010 new 臺南市 written with 台"
+                },
+                {
+                    "old": "台東縣",
+                    "new": "臺東縣",
+                    "type": "orthographic"
+                },
+                {
+                    "old": "台東市",
+                    "new": "臺東市",
+                    "type": "orthographic",
+                    "note": "臺東市 is the county seat city within 臺東縣"
+                },
+                {
+                    "old": "台南市",
+                    "new": "臺南市",
+                    "type": "orthographic"
+                },
+                {
+                    "old": "台灣省",
+                    "new": "臺灣省",
+                    "type": "orthographic",
+                    "note": "省 was functionally abolished in 1998 but name still appears in older documents"
+                }
+            ]
+        }
+    ],
+    "exhaustiveness_notes": {
+        "verified_date": "2026-03-01",
+        "covered": [
+            "All 2010-12-25 special municipality mergers (五都): 新北市, 臺中市, 臺南市, 高雄市",
+            "2014-12-25 Taoyuan upgrade: 桃園市",
+            "台/臺 orthographic variants for all names where 台 form is plausible in source data"
+        ],
+        "not_covered_by_design": [
+            "Pre-1945 Japanese-era place names (out of scope for this dataset)",
+            "1950 county reorganization (16 counties/5 cities) — dataset post-dates this",
+            "1982 Hsinchu/Chiayi city splits from their counties — source data uses current names",
+            "1967 Taipei City special municipality upgrade — source data uses current name 臺北市",
+            "1979 Kaohsiung City special municipality upgrade — source data uses 高雄市 (unchanged name)",
+            "Township-level renames within merged municipalities (鄉/鎮 → 區) — handled separately at village lookup level"
+        ],
+        "current_topojson_divisions": [
+            "臺北市",
+            "新北市",
+            "桃園市",
+            "臺中市",
+            "臺南市",
+            "高雄市",
+            "基隆市",
+            "新竹市",
+            "嘉義市",
+            "新竹縣",
+            "苗栗縣",
+            "彰化縣",
+            "南投縣",
+            "雲林縣",
+            "嘉義縣",
+            "屏東縣",
+            "宜蘭縣",
+            "花蓮縣",
+            "臺東縣",
+            "澎湖縣",
+            "金門縣",
+            "連江縣"
+        ]
+    }
+}

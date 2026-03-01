@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapIcon, RotateCcw } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
+import { getDialectColor } from './dialectColors';
 
 import { useTaiwanTopo } from '../hooks/useTaiwanTopo';
 import { useDialectData } from '../hooks/useDialectData';
@@ -15,19 +17,77 @@ const TaiwanMap: React.FC = () => {
   const [hoveredTown, setHoveredTown] = useState<any>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  const [selectedDialects, setSelectedDialects] = useState<Set<string>>(new Set());
+  // --- Persistence Keys ---
+  const STORAGE_KEYS = {
+    SELECTED_DIALECTS: 'ycm_selected_dialects',
+    SHOW_COUNTY_BORDERS: 'ycm_show_county_borders',
+    SHOW_TOWNSHIP_CONTOURS: 'ycm_show_township_contours',
+    SHOW_VILLAGE_BORDERS: 'ycm_show_village_borders',
+    SHOW_VILLAGE_COLORS: 'ycm_show_village_colors',
+    SHOW_FIXED_INFO: 'ycm_show_fixed_info',
+  };
+
+  const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_DIALECTS);
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   const [isFilterOpen, setIsFilterOpen] = useState(() => window.innerWidth > 768);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  const [showCountyBorders, setShowCountyBorders] = useState(true);
+  const [showCountyBorders, setShowCountyBorders] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_COUNTY_BORDERS);
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showFixedInfo, setShowFixedInfo] = useState(false);
-  const [showTownshipContours, setShowTownshipContours] = useState(false);
+  const [showFixedInfo, setShowFixedInfo] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_FIXED_INFO);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [showTownshipContours, setShowTownshipContours] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_TOWNSHIP_CONTOURS);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [showVillageBorders, setShowVillageBorders] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_VILLAGE_BORDERS);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [showVillageColors, setShowVillageColors] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
 
-  const { townFeatures, countyBorders, loading, error } = useTaiwanTopo();
+  // --- Persistence Effects ---
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_DIALECTS, JSON.stringify(Array.from(selectedDialects)));
+  }, [selectedDialects]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_COUNTY_BORDERS, JSON.stringify(showCountyBorders));
+  }, [showCountyBorders]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_TOWNSHIP_CONTOURS, JSON.stringify(showTownshipContours));
+  }, [showTownshipContours]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_BORDERS, JSON.stringify(showVillageBorders));
+  }, [showVillageBorders]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS, JSON.stringify(showVillageColors));
+  }, [showVillageColors]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
+  }, [showFixedInfo]);
+
+  const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error } = useTaiwanTopo(
+    'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
+    (showVillageBorders || showVillageColors) ? 'https://cdn.jsdelivr.net/npm/taiwan-atlas/villages-10t.json' : undefined
+  );
   const { languageGroups, allDialects, getDialects, getCountyTownFromProps } = useDialectData();
 
   // --- Search list (from topo features) ---
@@ -92,29 +152,10 @@ const TaiwanMap: React.FC = () => {
     });
   };
 
-  const selectAll = () => setSelectedDialects(new Set(allDialects));
-  const clearAll = () => setSelectedDialects(new Set());
-
-  // --- color helper (shared across UI + canvas) ---
-  const getDialectColor = (dialect: string) => {
-    const colors = [
-      '#3b82f6',
-      '#ef4444',
-      '#10b981',
-      '#f59e0b',
-      '#8b5cf6',
-      '#ec4899',
-      '#06b6d4',
-      '#84cc16',
-      '#f97316',
-      '#6366f1',
-    ];
-    let hash = 0;
-    for (let i = 0; i < dialect.length; i++) {
-      hash = dialect.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
+  const selectAll = () => {
+    setSelectedDialects(new Set(Object.values(languageGroups).flat()));
   };
+  const clearAll = () => setSelectedDialects(new Set());
 
   const hoveredLabel = useMemo(() => {
     if (!hoveredTown) return { county: '', town: '' };
@@ -150,6 +191,10 @@ const TaiwanMap: React.FC = () => {
             setShowFixedInfo={setShowFixedInfo}
             showTownshipContours={showTownshipContours}
             setShowTownshipContours={setShowTownshipContours}
+            showVillageBorders={showVillageBorders}
+            setShowVillageBorders={setShowVillageBorders}
+            showVillageColors={showVillageColors}
+            setShowVillageColors={setShowVillageColors}
           />
         </div>
       </header>
@@ -159,8 +204,12 @@ const TaiwanMap: React.FC = () => {
         ref={canvasRef}
         townFeatures={townFeatures}
         countyBorders={countyBorders}
+        villageBorders={villageBorders}
+        villageFeatures={villageFeatures}
         showCountyBorders={showCountyBorders}
         showTownshipContours={showTownshipContours}
+        showVillageBorders={showVillageBorders}
+        showVillageColors={showVillageColors}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
         getCountyTownFromProps={getCountyTownFromProps}

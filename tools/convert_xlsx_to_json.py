@@ -30,13 +30,68 @@ ALIASES = {
 # FORCED_MAP = {"原住民16族42方言分佈參考.xlsx": {"language":"族語","dialect":"方言別","county":"縣","township":"鄉鎮市","village":"村里"}}
 FORCED_MAP: Dict[str, Dict[str, str]] = {}
 
-# Normalize known naming variants (keep small; add only when needed)
-NAME_NORMALIZATION = {
-    "台北市": "臺北市",
-    "台中市": "臺中市",
-    "台南市": "臺南市",
-    "台東縣": "臺東縣",
-}
+# Name normalization is loaded from raw/county_reforms.json at startup.
+# The file documents administrative reforms (升格/合併) and orthographic
+# variants (台/臺) so that source data recorded under old names maps
+# correctly to the names used in the current TopoJSON.
+REFORMS_FILE = BASE / "raw" / "county_reforms.json"
+
+
+def _load_name_normalization() -> Dict[str, str]:
+    """Build flat {old: new} map from county_reforms.json.
+    Falls back to a minimal built-in table if the file is missing."""
+    if REFORMS_FILE.exists():
+        try:
+            data = json.loads(REFORMS_FILE.read_text(encoding="utf-8"))
+            mapping: Dict[str, str] = {}
+            for reform in data.get("reforms", []):
+                for m in reform.get("mappings", []):
+                    old, new = m.get("old", ""), m.get("new", "")
+                    if old and new:
+                        mapping[old] = new
+            print(f"[INFO] Loaded {len(mapping)} name mappings from {REFORMS_FILE.name}")
+            return mapping
+        except Exception as e:
+            print(f"[WARN] Could not load {REFORMS_FILE}: {e} — using built-in fallback")
+
+    # Built-in fallback (kept minimal intentionally — update county_reforms.json instead)
+    return {
+        "台北市": "臺北市",
+        "台中市": "臺中市",
+        "台中縣": "臺中市",
+        "台南市": "臺南市",
+        "台南縣": "臺南市",
+        "台北縣": "新北市",
+        "臺北縣": "新北市",
+        "桃園縣": "桃園市",
+        "高雄縣": "高雄市",
+        "台東縣": "臺東縣",
+    }
+
+
+NAME_NORMALIZATION: Dict[str, str] = _load_name_normalization()
+
+
+def _load_township_normalization() -> Dict[str, Dict[str, str]]:
+    """Build {county: {old_township: new_township}} map from county_reforms.json.
+    Falls back to a minimal built-in table if the file is missing."""
+    if REFORMS_FILE.exists():
+        try:
+            data = json.loads(REFORMS_FILE.read_text(encoding="utf-8"))
+            raw = data.get("township_renames", {})
+            result: Dict[str, Dict[str, str]] = {}
+            for county, v in raw.items():
+                if county.startswith("_") or not isinstance(v, dict):
+                    continue
+                result[county] = {k: val for k, val in v.items() if not k.startswith("_")}
+            print(f"[INFO] Loaded township renames for {len(result)} county/ies from {REFORMS_FILE.name}")
+            return result
+        except Exception as e:
+            print(f"[WARN] Could not load township_renames from {REFORMS_FILE}: {e}")
+    return {}
+
+
+TOWNSHIP_NORMALIZATION: Dict[str, Dict[str, str]] = _load_township_normalization()
 
 # =========================
 # HELPERS
@@ -64,16 +119,155 @@ def norm_text(x) -> str:
     return NAME_NORMALIZATION.get(s, s)
 
 
+def split_aware_of_brackets(s: str, separators: List[str]) -> List[str]:
+    """Split a string by separators, but only if they are OUTSIDE of (...), [\u3010...\u3011], etc.
+    This prevents splitting villages like '\u9577\u6a02\u6751(\u548c\u5e73\u8def\u3001\u516b\u7464\u8def)' at the internal comma.
+    """
+    if not any(sep in s for sep in separators):
+        return [s]
+
+    res = []
+    current = []
+    depth = 0
+    # Map of opening to closing brackets
+    opening = {'(': ')', '\u3010': '\u3011', '[': ']'}
+    closing = {')': '(', '\u3011': '\u3010', ']': '['}
+
+    for char in s:
+        if char in opening:
+            depth += 1
+        elif char in closing:
+            depth = max(0, depth - 1)
+
+        if depth == 0 and char in separators:
+            token = "".join(current).strip()
+            if token:
+                res.append(token)
+            current = []
+        else:
+            current.append(char)
+
+    last_token = "".join(current).strip()
+    if last_token:
+        res.append(last_token)
+
+    return res
+
+
+def clean_village_name(v: str) -> str:
+    """Clean a single village name token.
+
+    Handles the following artefacts from Excel merged-cell exports:
+    - Mid-word whitespace: '\u5185\u7375 \u6751' -> '\u5185\u7375\u6751'
+    - Parenthetical annotations: '\u4e09\u548c\u6751(\u7f8e\u5712\u793e\u5340)' -> '\u4e09\u548c\u6751'
+    - Full-width bracket annotations: '\u53e4\u83ef\u6751\u3010\u58eb\u6587\u65cf\u7fa4\u3011' -> '\u53e4\u83ef\u6751'
+    - Unclosed / hanging brackets: '\u9577\u6a02\u6751(\u548c\u5e73\u8def' -> '\u9577\u6a02\u6751'
+    - Leading/trailing whitespace after stripping
+    """
+    # collapse mid-word spaces (e.g. '\u5167\u7375 \u6751', '\u5357 \u6c99\u9b6f\u91cc')
+    v = re.sub(r'([\u4e00-\u9fff])\s+([\u4e00-\u9fff])', r'\1\2', v)
+
+    # strip matched parentheticals
+    v = re.sub(r'\([^)]*\)', '', v)
+    v = re.sub(r'\u3010[^\u3011]*\u3011', '', v)
+    v = re.sub(r'\[[^\]]*\]', '', v)
+
+    # strip unclosed/hanging notes (anything from first paren/bracket to end)
+    v = re.sub(r'[(\u3010\[].*$', '', v)
+
+    return v.strip()
+
+
+def is_valid_village(v: str) -> bool:
+    """Return True if the string looks like an actual 村/里 admin unit.
+
+    Rejects:
+    - Empty strings
+    - Strings that end with ) (tail fragment of a split parenthetical)
+    - Strings that don't end in 村 or 里 after cleaning
+      (e.g. pure sub-village descriptions like '大平林', '內坤', '大坤')
+    """
+    if not v:
+        return False
+    # must end with 村 or 里
+    if not (v.endswith('村') or v.endswith('里')):
+        return False
+    return True
+
+
+def extract_village_annotations(
+    raw_str: str,
+    county: str,
+    township: str,
+    dialect: str,
+) -> tuple:
+    """從原始村里字串中提取兩類資訊:
+
+    1. village_notes: {"縣|鄉鎮市|村里": "小地名/社區名"} — from entries like
+       '生涯村(古美)' → note='古美'
+    2. non_admin: [{縣, 鄉鎮市, name, 方言別, note?}] — place names that
+       don't end in 村/里 (hamlets, settlements, sub-village names).
+       e.g. '大平林', '內坪', '達卡努瓦里(Takanua)'  ← this one HAS 里
+    """
+    if not raw_str:
+        return {}, []
+
+    # split on list separators only — preserve paren content intact
+    s = raw_str
+    separators = ["\u3001", "\n", "\x00"] # \x00 is from a previous replace if any
+    tokens = split_aware_of_brackets(s, separators)
+
+    village_notes: Dict[str, str] = {}
+    non_admin: List[dict] = []
+
+    for tok in tokens:
+        # collapse mid-word CJK spaces first
+        tok = re.sub(r'([\u4e00-\u9fff])\s+([\u4e00-\u9fff])', r'\1\2', tok)
+        # extract all parenthetical and bracket content before stripping
+        paren_notes = re.findall(r'\(([^)]*)\)', tok)
+        fw_notes = re.findall(r'\u3010([^\u3011]*)\u3011', tok)
+        all_notes = [n.strip() for n in paren_notes + fw_notes if n.strip()]
+        # build clean base name
+        base = re.sub(r'\([^)]*\)', '', tok)
+        base = re.sub(r'\u3010[^\u3011]*\u3011', '', base).strip()
+        if not base:
+            continue
+        if is_valid_village(base):
+            if all_notes:
+                key = f"{county}|{township}|{base}"
+                new_note = '、'.join(all_notes)
+                existing = village_notes.get(key, '')
+                village_notes[key] = f"{existing}、{new_note}" if existing else new_note
+        elif not base.endswith(')'):
+            # non-admin place name (hamlet, settlement, etc.)
+            entry: dict = {"縣": county, "鄉鎮市": township, "name": base, "方言別": dialect}
+            if all_notes:
+                entry["note"] = '、'.join(all_notes)
+            non_admin.append(entry)
+
+    return village_notes, non_admin
+
+
 def split_multi(s: str) -> List[str]:
     s = norm_text(s)
     if not s:
         return []
-    # normalize common separators to a newline then split
-    s = s.replace("、", "\n")
-    s = s.replace(",", "\n").replace("，", "\n").replace("；", "\n").replace(";", "\n")
-    s = s.replace("/", "\n")
-    parts = [p.strip() for p in s.splitlines() if p.strip()]
-    return parts
+
+    # split by list separators, but ignore those inside parentheses
+    separators = ["\u3001", "\n", ",", "\uff0c", "\uff1b", ";", "/"]
+    parts = split_aware_of_brackets(s, separators)
+
+    # clean and filter each token
+    cleaned = []
+    seen = set()
+    for p in parts:
+        p = clean_village_name(p)
+        if not is_valid_village(p):
+            continue
+        if p not in seen:
+            seen.add(p)
+            cleaned.append(p)
+    return cleaned
 
 
 def iter_xlsx_files(folder: Path) -> List[Path]:
@@ -137,8 +331,16 @@ def forward_fill_merged_cells(df: pd.DataFrame, colmap: Dict[str, str]) -> pd.Da
     return df
 
 
-def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> List[dict]:
+def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> tuple:
+    """Returns (records, village_notes, non_admin_places).
+
+    village_notes: {"縣|鄉鎮市|村里": "annotation string"}
+    non_admin_places: [{obj}] — place names that are not \u91cc/\u6751 admin units
+    """
     recs = []
+    all_village_notes: Dict[str, str] = {}
+    all_non_admin: List[dict] = []
+
     for _, row in df.iterrows():
         language = norm_text(row.get(colmap["language"]))
         dialect = norm_text(row.get(colmap["dialect"]))
@@ -152,6 +354,11 @@ def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> List[dict]:
 
         rec = {"族語": language, "方言別": dialect, "縣": county, "鄉鎮市": township}
 
+        # Context-bound township rename (e.g. 復興鄉 → 復興區 under 桃園市)
+        if county in TOWNSHIP_NORMALIZATION:
+            township = TOWNSHIP_NORMALIZATION[county].get(township, township)
+            rec["鄉鎮市"] = township
+
         if "village" in colmap:
             villages = split_multi(village_raw)
             if INCLUDE_VILLAGES_IN_FULL:
@@ -159,8 +366,15 @@ def df_to_records(df: pd.DataFrame, colmap: Dict[str, str]) -> List[dict]:
             else:
                 rec["村里_raw"] = village_raw
 
+            # collect annotation metadata from the raw string
+            vn, na = extract_village_annotations(village_raw, county, township, dialect)
+            for k, v in vn.items():
+                all_village_notes[k] = v
+            all_non_admin.extend(na)
+
         recs.append(rec)
-    return recs
+    return recs, all_village_notes, all_non_admin
+
 
 
 # =========================
@@ -309,6 +523,57 @@ def build_full_grouped(records: List[dict]) -> Dict:
 
     return {"schema": "taiwan.dialect.full.v1", "items": list(grouped.values())}
 
+def build_village_lookup(records: List[dict]) -> Dict:
+    """
+    Build a flat lookup: {"縣|鄉鎮市|村里": ["方言別", ...]}
+    Used by the future village-level map layer to color 里/村 by dialect.
+    """
+    lookup: Dict[str, List[str]] = {}
+    for r in records:
+        c = r.get("縣", "")
+        t = r.get("鄉鎮市", "")
+        dia = r.get("方言別", "")
+        if not (c and t and dia):
+            continue
+        for v in r.get("村里", []):
+            if not v:
+                continue
+            key = f"{c}|{t}|{v}"
+            if dia not in lookup.get(key, []):
+                lookup.setdefault(key, []).append(dia)
+    return {"schema": "taiwan.village.lookup.v1", "lookup": lookup}
+
+
+def build_admin_tree_md(records: List[dict]) -> str:
+    """Build a human-readable markdown tree of the administrative divisions found in the data."""
+    tree: Dict[str, Dict[str, set]] = {}
+    for r in records:
+        c = r.get("縣", "")
+        t = r.get("鄉鎮市", "")
+        villages = r.get("村里", [])
+        if not (c and t):
+            continue
+        tree.setdefault(c, {}).setdefault(t, set())
+        if isinstance(villages, list):
+            for v in villages:
+                if v:
+                    tree[c][t].add(v)
+
+    lines = ["# Administrative division tree recorded in source\n"]
+    counties = sorted(tree.keys())
+    lines.append(f"- Counties: **{len(counties)}**\n")
+
+    for county in counties:
+        towns = tree[county]
+        lines.append(f"\n## {county}\n")
+        lines.append(f"- 鄉鎮市：**{len(towns)}**\n")
+        for town in sorted(towns.keys()):
+            villages = sorted(list(towns[town]))
+            lines.append(f"- **{town}** (村里：{len(villages)})\n")
+            for v in villages:
+                lines.append(f"  - {v}\n")
+
+    return "".join(lines)
 
 def build_bundle(xlsx_name: str, sheet: str, area_index: Dict, language_groups: Dict, records: List[dict], colmap: Dict[str, str]) -> Dict:
     languages = sorted(list(language_groups.keys()))
@@ -355,21 +620,51 @@ def convert_one(xlsx: Path, out_dir: Path):
         return
 
     df = forward_fill_merged_cells(df, colmap)
-    records = df_to_records(df, colmap)
+    records, village_notes, non_admin = df_to_records(df, colmap)
 
     area_index = build_area_index(records)
     language_groups = build_language_groups(area_index)
 
     bundle = build_bundle(xlsx.name, sheet, area_index, language_groups, records, colmap)
-    bundle_path = out_dir / f"{xlsx.stem}.bundle.json"
+    bundle_path = out_dir / "dialects.bundle.json"
     bundle_path.write_text(json.dumps(bundle, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK]  wrote: {bundle_path.resolve()}")
 
+    # Output reports to a subfolder
+    report_dir = out_dir / "reports"
+    report_dir.mkdir(exist_ok=True)
+
     if WRITE_FULL_JSON:
         full = build_full_grouped(records)
-        full_path = out_dir / f"{xlsx.stem}.full.json"
+        full_path = out_dir / "dialects.full.json"
         full_path.write_text(json.dumps(full, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"      wrote: {full_path.resolve()}")
+
+        village_lookup = build_village_lookup(records)
+        vl_path = out_dir / "villages.lookup.json"
+        vl_path.write_text(json.dumps(village_lookup, ensure_ascii=False, indent=2), encoding="utf-8")
+        village_count = len(village_lookup["lookup"])
+        print(f"      wrote: {vl_path.resolve()} ({village_count} entries)")
+
+        annotations_out = {
+            "schema": "taiwan.village.annotations.v1",
+            "note": "Parenthetical notes and non-admin place names extracted from the XLSX. Useful for UI tooltips.",
+            "village_notes": village_notes,
+            "non_admin_places": non_admin,
+        }
+        va_path = out_dir / "villages.notes.json"
+        va_path.write_text(json.dumps(annotations_out, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"      wrote: {va_path.resolve()} ({len(village_notes)} notes)")
+
+    # reports
+    tree_path = report_dir / "dialects.summary.md"
+    tree_path.write_text(build_admin_tree_md(records), encoding="utf-8")
+
+    index_path = out_dir / "dialects.index.json" # keep index in main data if it's used by frontend
+    index_path.write_text(json.dumps(area_index, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    dup_path = report_dir / "dialects.duplicates.csv"
+    pd.DataFrame(records).to_csv(dup_path, index=False) # this is a placeholder for duplicate logic if needed later
 
 
 def main():
