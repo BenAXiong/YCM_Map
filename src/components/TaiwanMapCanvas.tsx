@@ -37,6 +37,49 @@ type Props = {
     showLvl3Names: boolean;
 };
 
+// Moved helper outside to avoid any closure/initialization issues
+const generateAreaFill = (
+    dialectsArray: string[],
+    selectedDialects: Set<string>,
+    showShared: boolean,
+    gDefsRef: React.MutableRefObject<SVGDefsElement | null>
+) => {
+    if (!dialectsArray.length) return '#f5f5f4';
+
+    const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
+    if (selectedHere.length === 0) return '#ffffff';
+
+    if (!showShared || selectedHere.length === 1) {
+        return getDialectColor(selectedHere[0]);
+    }
+
+    const sorted = [...selectedHere].sort();
+    const gradId = `grad-${sorted.join('-').replace(/\s+/g, '')}`;
+
+    if (gDefsRef.current && !document.getElementById(gradId)) {
+        const grad = d3.select(gDefsRef.current)
+            .append('linearGradient')
+            .attr('id', gradId)
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '100%')
+            .attr('y2', '0%');
+
+        const step = 100 / sorted.length;
+        sorted.forEach((d, i) => {
+            const color = getDialectColor(d);
+            grad.append('stop')
+                .attr('offset', `${i * step}%`)
+                .attr('stop-color', color);
+            grad.append('stop')
+                .attr('offset', `${(i + 1) * step}%`)
+                .attr('stop-color', color);
+        });
+    }
+
+    return `url(#${gradId})`;
+};
+
 const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
     (
         {
@@ -84,12 +127,6 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             },
         }));
 
-        // Keep the latest contour toggle accessible inside D3 handlers
-        const contourRef = useRef<boolean>(showTownshipContours);
-        useEffect(() => {
-            contourRef.current = showTownshipContours;
-        }, [showTownshipContours]);
-
         // Keep stable refs for all volatile props so D3 handlers never go stale
         const stateRef = useRef({
             showCountyBorders,
@@ -100,7 +137,10 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             onHover,
             onLeave,
             onClickTown,
+            showSharedDialects,
+            showTownshipContours
         });
+
         useEffect(() => {
             stateRef.current = {
                 showCountyBorders,
@@ -111,67 +151,29 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 onHover,
                 onLeave,
                 onClickTown,
+                showSharedDialects,
+                showTownshipContours
             };
         });
 
         const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
 
-        const getAreaFill = (dialectsArray: string[], selectedDialects: Set<string>, showShared: boolean) => {
-            if (!dialectsArray.length) return '#f5f5f4';
-
-            const selectedHere = dialectsArray.filter((x) => selectedDialects.has(x));
-            if (selectedHere.length === 0) return '#ffffff';
-
-            if (!showShared || selectedHere.length === 1) {
-                return getDialectColor(selectedHere[0]);
-            }
-
-            const sorted = [...selectedHere].sort();
-            const gradId = `grad-${sorted.join('-').replace(/\s+/g, '')}`;
-
-            if (gDefsRef.current && !document.getElementById(gradId)) {
-                const grad = d3.select(gDefsRef.current)
-                    .append('linearGradient')
-                    .attr('id', gradId)
-                    .attr('x1', '0%')
-                    .attr('y1', '0%')
-                    .attr('x2', '100%')
-                    .attr('y2', '0%');
-
-                const step = 100 / sorted.length;
-                sorted.forEach((d, i) => {
-                    const color = getDialectColor(d);
-                    grad.append('stop')
-                        .attr('offset', `${i * step}%`)
-                        .attr('stop-color', color);
-                    grad.append('stop')
-                        .attr('offset', `${(i + 1) * step}%`)
-                        .attr('stop-color', color);
-                });
-            }
-
-            return `url(#${gradId})`;
-        };
-
-        // Update fills when selectedDialects changes (no full re-render)
+        // 1. Update fills when selection or mode changes
         useEffect(() => {
-            const { getDialects, getVillageDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
+            const { getDialects, getVillageDialects, getCountyTownVillageFromProps, selectedDialects, showSharedDialects } = stateRef.current;
 
-            // 1. Update Townships
             if (gTownshipsRef.current) {
                 d3.select(gTownshipsRef.current)
                     .selectAll<SVGPathElement, any>('.township')
                     .attr('fill', (d: any) => {
-                        if (showVillageColors) return 'transparent'; // Mode B: let villages show through
-
+                        if (showVillageColors) return 'transparent';
                         const p = d.properties || {};
                         const { county, town } = getCountyTownVillageFromProps(p);
                         const dialectsArray = getDialects(county, town);
-                        return getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
+                        return generateAreaFill(dialectsArray, selectedDialects, showSharedDialects, gDefsRef);
                     });
             }
 
-            // 2. Update Village Polygons (Mode B)
             if (gVillagePolygonsRef.current) {
                 d3.select(gVillagePolygonsRef.current)
                     .selectAll<SVGPathElement, any>('.village-poly')
@@ -179,103 +181,75 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         const p = d.properties || {};
                         const { county, town, village } = getCountyTownVillageFromProps(p);
                         const dialectsArray = getVillageDialects(county, town, village);
-
                         if (!dialectsArray.length) return showVillageColors ? '#f5f5f4' : 'transparent';
-                        const fill = getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
+                        const fill = generateAreaFill(dialectsArray, selectedDialects, showSharedDialects, gDefsRef);
                         return (fill === '#ffffff' && !showVillageColors) ? 'transparent' : fill;
                     });
             }
-        }, [selectedDialects, getDialects, getVillageDialects, getCountyTownVillageFromProps, showVillageColors, showSharedDialects]);
+        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps]);
 
-        // Show/hide county borders without redrawing
+        // 2. Toggle Layers Visibility
         useEffect(() => {
-            if (!gBordersRef.current) return;
-            d3.select(gBordersRef.current)
-                .selectAll<SVGPathElement, any>('.county-border')
-                .attr('display', showCountyBorders ? 'block' : 'none');
+            if (gBordersRef.current) {
+                d3.select(gBordersRef.current)
+                    .selectAll('.county-border')
+                    .attr('display', showCountyBorders ? 'block' : 'none');
+            }
         }, [showCountyBorders]);
 
-        // Toggle township contour strokes without redrawing
         useEffect(() => {
-            if (!gTownshipsRef.current) return;
-            const strokeColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
-            const strokeWidth = showTownshipContours ? 0.5 : 0.3;
-
-            d3.select(gTownshipsRef.current)
-                .selectAll<SVGPathElement, any>('.township')
-                .each(function () {
-                    const sel = d3.select(this);
-                    if (sel.attr('stroke') !== '#000000') {
-                        sel.attr('stroke', strokeColor).attr('stroke-width', strokeWidth);
-                    }
-                });
+            if (gTownshipsRef.current) {
+                const strokeColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
+                const strokeWidth = showTownshipContours ? 0.5 : 0.3;
+                d3.select(gTownshipsRef.current)
+                    .selectAll<SVGPathElement, any>('.township')
+                    .each(function () {
+                        const sel = d3.select(this);
+                        if (sel.attr('stroke') !== '#000000') {
+                            sel.attr('stroke', strokeColor).attr('stroke-width', strokeWidth);
+                        }
+                    });
+            }
         }, [showTownshipContours]);
 
-        // Show/hide village layers without redrawing
         useEffect(() => {
-            const { selectedDialects, getDialects, getCountyTownVillageFromProps } = stateRef.current;
             if (gVillagesRef.current) {
                 d3.select(gVillagesRef.current)
-                    .selectAll<SVGPathElement, any>('.village-border')
+                    .selectAll('.village-border')
                     .attr('display', showVillageBorders ? 'block' : 'none');
             }
             if (gVillagePolygonsRef.current) {
-                const gVP = d3.select(gVillagePolygonsRef.current);
-                gVP.attr('display', showVillageColors ? 'block' : 'none')
-                    .selectAll<SVGPathElement, any>('.village-poly')
+                d3.select(gVillagePolygonsRef.current)
+                    .attr('display', showVillageColors ? 'block' : 'none')
+                    .selectAll('.village-poly')
                     .attr('pointer-events', showVillageColors ? 'auto' : 'none');
-
-                // If switching Mode B ON, ensure initial colors are correct
-                if (showVillageColors) {
-                    const { getVillageDialects, selectedDialects } = stateRef.current;
-                    gVP.selectAll<SVGPathElement, any>('.village-poly')
-                        .attr('fill', (d: any) => {
-                            const p = d.properties || {};
-                            const { county, town, village } = getCountyTownVillageFromProps(p);
-                            const dialectsArray = getVillageDialects(county, town, village);
-                            if (!dialectsArray.length) return '#f5f5f4';
-                            const fill = getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
-                            return fill;
-                        });
-                }
             }
             if (gTownshipsRef.current) {
                 d3.select(gTownshipsRef.current)
-                    .selectAll<SVGPathElement, any>('.township')
-                    .attr('pointer-events', showVillageColors ? 'none' : 'auto')
-                    .attr('fill', (d: any) => {
-                        if (showVillageColors) return 'transparent';
-                        const p = d.properties || {};
-                        const { county, town } = getCountyTownVillageFromProps(p);
-                        const dialectsArray = getDialects(county, town);
-                        return getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
-                    });
+                    .selectAll('.township')
+                    .attr('pointer-events', showVillageColors ? 'none' : 'auto');
             }
-        }, [showVillageBorders, showVillageColors, showSharedDialects]);
+        }, [showVillageBorders, showVillageColors]);
 
-        // Draw/Update Labels
+        // 3. Labels Update
         useEffect(() => {
             if (!svgRef.current || !townFeatures || !gLabelsRef.current) return;
 
             const gLabels = d3.select(gLabelsRef.current);
             gLabels.selectAll('*').remove();
 
-            const svg = d3.select(svgRef.current);
             const width = svgRef.current.clientWidth || window.innerWidth;
             const height = svgRef.current.clientHeight || window.innerHeight;
-            const projection = d3
-                .geoMercator()
+            const projection = d3.geoMercator()
                 .center([120.9, 23.65])
                 .scale(height * 14)
                 .translate([width / 2, height / 2]);
             const path = d3.geoPath().projection(projection);
 
-            // 1. Level 1 (Counties)
-            if (showLvl1Names && townFeatures) {
+            if (showLvl1Names) {
                 const countyGroups = d3.group(townFeatures.features, (d: any) => norm(getCountyTownVillageFromProps(d.properties).county));
                 const countyCenters = Array.from(countyGroups.entries()).map(([name, features]) => {
-                    const poly = { type: 'FeatureCollection', features };
-                    const center = path.centroid(poly as any);
+                    const center = path.centroid({ type: 'FeatureCollection', features } as any);
                     return { name, center };
                 });
 
@@ -296,8 +270,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .text(d => d.name);
             }
 
-            // 2. Level 2 (Townships)
-            if (showLvl2Names && townFeatures) {
+            if (showLvl2Names) {
                 gLabels.selectAll('.label-lvl2')
                     .data(townFeatures.features)
                     .enter()
@@ -315,7 +288,6 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .text((d: any) => getCountyTownVillageFromProps(d.properties).town);
             }
 
-            // 3. Level 3 (Villages)
             if (showLvl3Names && villageFeatures) {
                 gLabels.selectAll('.label-lvl3')
                     .data(villageFeatures.features)
@@ -334,12 +306,11 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .text((d: any) => getCountyTownVillageFromProps(d.properties).village);
             }
 
-            const currentTransform = d3.zoomTransform(svgRef.current);
+            const currentTransform = d3.zoomTransform(svgRef.current as any);
             gLabels.attr('transform', currentTransform.toString());
-
         }, [showLvl1Names, showLvl2Names, showLvl3Names, townFeatures, villageFeatures, getCountyTownVillageFromProps]);
 
-        // Full draw — only when geo data changes
+        // 4. MAIN DRAW
         useEffect(() => {
             if (!townFeatures || !svgRef.current) return;
 
@@ -349,13 +320,10 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
             svg.selectAll('*').remove();
 
-            const scale = height * 14;
-            const projection = d3
-                .geoMercator()
+            const projection = d3.geoMercator()
                 .center([120.9, 23.65])
-                .scale(scale)
+                .scale(height * 14)
                 .translate([width / 2, height / 2]);
-
             const path = d3.geoPath().projection(projection);
 
             const gDefs = svg.append('defs');
@@ -372,30 +340,23 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             gBordersRef.current = gBorders.node();
             gLabelsRef.current = gLabels.node();
 
-            const strokeColor = contourRef.current ? '#cbd5e1' : '#ffffff';
-            const strokeWidth = contourRef.current ? 0.5 : 0.3;
+            const sc = stateRef.current.showTownshipContours ? '#cbd5e1' : '#ffffff';
+            const sw = stateRef.current.showTownshipContours ? 0.5 : 0.3;
 
-            // 1. Village Polygons
             if (villageFeatures) {
-                gVillagePolygons
-                    .selectAll('path')
-                    .data((villageFeatures as any).features)
+                gVillagePolygons.selectAll('path')
+                    .data(villageFeatures.features)
                     .enter()
                     .append('path')
                     .attr('d', path as any)
                     .attr('class', 'village-poly')
                     .attr('fill', '#f5f5f4')
-                    .attr('stroke', 'none')
-                    .attr('pointer-events', showVillageColors ? 'auto' : 'none')
-                    .attr('display', showVillageColors ? 'block' : 'none')
                     .style('cursor', 'pointer')
                     .on('mouseenter', (event: any, d: any) => {
-                        const { onHover } = stateRef.current;
                         if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                         (window as any).hoverTimeout_ycm = setTimeout(() => {
-                            onHover(d.properties, event.clientX, event.clientY);
+                            stateRef.current.onHover(d.properties, event.clientX, event.clientY);
                         }, 250);
-
                         d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 0.8).raise();
                     })
                     .on('mousemove', (event: any, d: any) => {
@@ -412,26 +373,21 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     });
             }
 
-            // 2. Township Polygons (Interaction Layer)
-            gTownships
-                .selectAll('path')
-                .data((townFeatures as any).features)
+            gTownships.selectAll('path')
+                .data(townFeatures.features)
                 .enter()
                 .append('path')
                 .attr('d', path as any)
                 .attr('class', 'township')
-                .attr('fill', showVillageColors ? 'transparent' : '#ffffff')
-                .attr('stroke', strokeColor)
-                .attr('stroke-width', strokeWidth)
-                .attr('pointer-events', showVillageColors ? 'none' : 'auto')
+                .attr('fill', '#ffffff')
+                .attr('stroke', sc)
+                .attr('stroke-width', sw)
                 .style('cursor', 'pointer')
                 .on('mouseenter', (event: any, d: any) => {
-                    const { onHover } = stateRef.current;
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                     (window as any).hoverTimeout_ycm = setTimeout(() => {
-                        onHover(d.properties, event.clientX, event.clientY);
+                        stateRef.current.onHover(d.properties, event.clientX, event.clientY);
                     }, 50);
-
                     d3.select(event.currentTarget).attr('stroke', '#000000').attr('stroke-width', 1).raise();
                     if (gVillagesRef.current) d3.select(gVillagesRef.current).raise();
                     if (gBordersRef.current) d3.select(gBordersRef.current).raise();
@@ -442,22 +398,18 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 .on('mouseleave', function () {
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                     stateRef.current.onLeave();
-                    const contour = contourRef.current;
-                    d3.select(gTownshipsRef.current)
-                        .selectAll<SVGPathElement, any>('.township')
-                        .attr('stroke', contour ? '#cbd5e1' : '#ffffff')
-                        .attr('stroke-width', contour ? 0.5 : 0.3);
+                    const s = stateRef.current.showTownshipContours ? '#cbd5e1' : '#ffffff';
+                    const w = stateRef.current.showTownshipContours ? 0.5 : 0.3;
+                    d3.select(this).attr('stroke', s).attr('stroke-width', w);
                 })
-                .on('click', function (event: any, d: any) {
+                .on('click', (event: any, d: any) => {
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
                     stateRef.current.onClickTown(d.properties, event.clientX, event.clientY);
                 });
 
-            // Zoom
-            const zoom = d3
-                .zoom<SVGSVGElement, unknown>()
-                .scaleExtent([0.5, 20])
-                .on('zoom', (event: any) => {
+            const zoom = d3.zoom<SVGSVGElement, unknown>()
+                .scaleExtent([0.5, 40])
+                .on('zoom', (event) => {
                     gVillagePolygons.attr('transform', event.transform);
                     gTownships.attr('transform', event.transform);
                     gVillages.attr('transform', event.transform);
@@ -467,74 +419,60 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
             zoomRef.current = zoom;
             svg.call(zoom)
-                .on('dblclick.zoom', null) // Disable double-click to zoom
-                .on('click', (event: any) => {
-                    if (event.target === svgRef.current && onClickBackground) {
-                        onClickBackground();
-                    }
+                .on('dblclick.zoom', null)
+                .on('click', (event) => {
+                    if (event.target === svgRef.current && onClickBackground) onClickBackground();
                 });
 
-            // Village borders (Mesh)
             if (villageBorders) {
-                gVillages
-                    .append('path')
+                gVillages.append('path')
                     .datum(villageBorders)
                     .attr('d', path as any)
                     .attr('class', 'village-border')
                     .attr('fill', 'none')
                     .attr('stroke', '#e2e8f0')
                     .attr('stroke-width', 0.2)
-                    .attr('pointer-events', 'none')
                     .attr('display', showVillageBorders ? 'block' : 'none');
             }
 
-        }
-
-            // County borders
             if (countyBorders) {
-            gBorders
-                .append('path')
-                .datum(countyBorders)
-                .attr('d', path as any)
-                .attr('class', 'county-border')
-                .attr('fill', 'none')
-                .attr('stroke', '#94a3b8')
-                .attr('stroke-width', 0.8)
-                .attr('pointer-events', 'none')
-                .attr('display', stateRef.current.showCountyBorders ? 'block' : 'none');
-        }
+                gBorders.append('path')
+                    .datum(countyBorders)
+                    .attr('d', path as any)
+                    .attr('class', 'county-border')
+                    .attr('fill', 'none')
+                    .attr('stroke', '#94a3b8')
+                    .attr('stroke-width', 0.8)
+                    .attr('display', stateRef.current.showCountyBorders ? 'block' : 'none');
+            }
 
-        // Initial color pass (Manual)
-        d3.select(gTownshipsRef.current)
-            .selectAll<SVGPathElement, any>('.township')
-            .attr('fill', (d: any) => {
-                const { selectedDialects, getDialects, getCountyTownVillageFromProps } = stateRef.current;
-                if (showVillageColors) return 'transparent';
-                const p = d.properties || {};
-                const { county, town } = getCountyTownVillageFromProps(p);
-                const dialectsArray = getDialects(county, town);
-                return getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
-            });
-
-        if (gVillagePolygonsRef.current) {
-            const { getVillageDialects, getCountyTownVillageFromProps, selectedDialects } = stateRef.current;
-            d3.select(gVillagePolygonsRef.current)
-                .selectAll<SVGPathElement, any>('.village-poly')
+            // Initial fills (Sync with current selection)
+            const { selectedDialects, showSharedDialects } = stateRef.current;
+            d3.select(gTownshipsRef.current).selectAll('.township')
                 .attr('fill', (d: any) => {
-                    const p = d.properties || {};
-                    const { county, town, village } = getCountyTownVillageFromProps(p);
-                    const dialectsArray = getVillageDialects(county, town, village);
-                    if (!dialectsArray.length) return showVillageColors ? '#f5f5f4' : 'transparent';
-                    const fill = getAreaFill(dialectsArray, selectedDialects, showSharedDialects);
-                    return (fill === '#ffffff' && !showVillageColors) ? 'transparent' : fill;
-                });
-        }
-    }, [townFeatures, villageFeatures, countyBorders, villageBorders]);
+                    if (showVillageColors) return 'transparent';
+                    const dialects = getDialects(getCountyTownVillageFromProps(d.properties).county, getCountyTownVillageFromProps(d.properties).town);
+                    return generateAreaFill(dialects, selectedDialects, showSharedDialects, gDefsRef);
+                })
+                .attr('pointer-events', showVillageColors ? 'none' : 'auto');
 
-return <svg ref={svgRef} className="w-full h-full" />;
+            if (villageFeatures) {
+                d3.select(gVillagePolygonsRef.current).selectAll('.village-poly')
+                    .attr('fill', (d: any) => {
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const dialects = getVillageDialects(county, town, village);
+                        return generateAreaFill(dialects, selectedDialects, showSharedDialects, gDefsRef);
+                    })
+                    .attr('pointer-events', showVillageColors ? 'auto' : 'none');
+
+                d3.select(gVillagePolygonsRef.current).attr('display', showVillageColors ? 'block' : 'none');
+            }
+
+        }, [townFeatures, villageFeatures, countyBorders, villageBorders]);
+
+        return <svg ref={svgRef} className="w-full h-full bg-slate-50" />;
     }
 );
 
 TaiwanMapCanvas.displayName = 'TaiwanMapCanvas';
-
 export default TaiwanMapCanvas;
