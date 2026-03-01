@@ -48,7 +48,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                             </span>
                         )}
                         <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em]">
-                            {hoveredLabel.county} / {hoveredLabel.town}
+                            {mt(hoveredLabel.county)} / {mt(hoveredLabel.town)}
                         </h3>
                     </div>
 

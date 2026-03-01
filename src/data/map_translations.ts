@@ -51,7 +51,50 @@ export const mapTranslations: Record<string, Record<string, string>> = {
         '萬山魯凱語': '萬山魯凱語',
         '都達語': '都達語',
         '德固達雅語': '德固達雅語',
-        '德魯固語': '德魯固語'
+        '德魯固語': '德魯固語',
+
+        // Level 1: Counties & Cities
+        '宜蘭縣': '宜蘭縣',
+        '花蓮縣': '花蓮縣',
+        '臺東縣': '臺東縣',
+        '屏東縣': '屏東縣',
+        '高雄市': '高雄市',
+        '南投縣': '南投縣',
+        '嘉義縣': '嘉義縣',
+        '桃園市': '桃園市',
+        '臺中市': '臺中市',
+        '新竹縣': '新竹縣',
+        '苗栗縣': '苗栗縣',
+
+        // Level 2: Townships/Districts
+        // Yilan
+        '宜蘭市': '宜蘭市', '羅東鎮': '羅東鎮', '蘇澳鎮': '蘇澳鎮', '頭城鎮': '頭城鎮',
+        '礁溪鄉': '礁溪鄉', '壯圍鄉': '壯圍鄉', '員山鄉': '員山鄉', '冬山鄉': '冬山鄉',
+        '五結鄉': '五結鄉', '三星鄉': '三星鄉', '大同鄉': '大同鄉', '南澳鄉': '南澳鄉',
+        // Hualien
+        '花蓮市': '花蓮市', '鳳林鎮': '鳳林鎮', '玉里鎮': '玉里鎮', '新城鄉': '新城鄉',
+        '吉安鄉': '吉安鄉', '壽豐鄉': '壽豐鄉', '光復鄉': '光復鄉', '豐濱鄉': '豐濱鄉',
+        '瑞穗鄉': '瑞穗鄉', '富里鄉': '富里鄉', '秀林鄉': '秀林鄉', '萬榮鄉': '萬榮鄉', '卓溪鄉': '卓溪鄉',
+        // Taitung
+        '臺東市': '臺東市', '成功鎮': '成功鎮', '關山鎮': '關山鎮', '卑南鄉': '卑南鄉',
+        '鹿野鄉': '鹿野鄉', '池上鄉': '池上鄉', '東河鄉': '東河鄉', '長濱鄉': '長濱鄉',
+        '太麻里鄉': '太麻里鄉', '大武鄉': '大武鄉', '綠島鄉': '綠島鄉', '海端鄉': '海端鄉',
+        '延平鄉': '延平鄉', '金峰鄉': '金峰鄉', '達仁鄉': '達仁鄉', '蘭嶼鄉': '蘭嶼鄉',
+        // Pingtung
+        '屏東市': '屏東市', '潮州鎮': '潮州鎮', '東港鎮': '東港鎮', '恆春鎮': '恆春鎮',
+        '萬丹鄉': '萬丹鄉', '長治鄉': '長治鄉', '麟洛鄉': '麟洛鄉', '九如鄉': '九如鄉',
+        '里港鄉': '里港鄉', '高樹鄉': '高樹鄉', '鹽埔鄉': '鹽埔鄉', '內埔鄉': '內埔鄉',
+        '萬巒鄉': '萬巒鄉', '竹田鄉': '竹田鄉', '三地門鄉': '三地門鄉', '霧臺鄉': '霧臺鄉',
+        '瑪家鄉': '瑪家鄉', '泰武鄉': '泰武鄉', '來義鄉': '來義鄉', '春日鄉': '春日鄉',
+        '獅子鄉': '獅子鄉', '牡丹鄉': '牡丹鄉',
+        // Others (Indigenous Areas)
+        '茂林區': '茂林區', '桃源區': '桃源區', '那瑪夏區': '那瑪夏區',
+        '仁愛鄉': '仁愛鄉', '信義鄉': '信義鄉',
+        '阿里山鄉': '阿里山鄉',
+        '復興區': '復興區',
+        '和平區': '和平區',
+        '尖石鄉': '尖石鄉', '五峰鄉': '五峰鄉',
+        '泰安鄉': '泰安鄉'
     },
     en: {
         // Languages
@@ -105,6 +148,49 @@ export const mapTranslations: Record<string, Record<string, string>> = {
         '萬山魯凱語': 'Oponoho Rukai',
         '都達語': 'Toda Seediq',
         '德固達雅語': 'Tgdaya Seediq',
-        '德魯固語': 'Truku Seediq'
+        '德魯固語': 'Truku Seediq',
+
+        // Level 1: Counties & Cities
+        '宜蘭縣': 'Yilan County',
+        '花蓮縣': 'Hualien County',
+        '臺東縣': 'Taitung County',
+        '屏東縣': 'Pingtung County',
+        '高雄市': 'Kaohsiung City',
+        '南投縣': 'Nantou County',
+        '嘉義縣': 'Chiayi County',
+        '桃園市': 'Taoyuan City',
+        '臺中市': 'Taichung City',
+        '新竹縣': 'Hsinchu County',
+        '苗栗縣': 'Miaoli County',
+
+        // Level 2: Townships/Districts
+        // Yilan
+        '宜蘭市': 'Yilan City', '羅東鎮': 'Luodong Township', '蘇澳鎮': 'Su\'ao Township', '頭城鎮': 'Toucheng Township',
+        '礁溪鄉': 'Jiaoxi Township', '壯圍鄉': 'Zhuangwei Township', '員山鄉': 'Yuanshan Township', '冬山鄉': 'Dongshan Township',
+        '五結鄉': 'Wujie Township', '三星鄉': 'Sanxing Township', '大同鄉': 'Datong Township', '南澳鄉': 'Nan\'ao Township',
+        // Hualien
+        '花蓮市': 'Hualien City', '鳳林鎮': 'Fenglin Township', '玉里鎮': 'Yuli Township', '新城鄉': 'Xincheng Township',
+        '吉安鄉': 'Ji\'an Township', '壽豐鄉': 'Shoufeng Township', '光復鄉': 'Guangfu Township', '豐濱鄉': 'Fengbin Township',
+        '瑞穗鄉': 'Ruisui Township', '富里鄉': 'Fuli Township', '秀林鄉': 'Xiulin Township', '萬榮鄉': 'Wanrong Township', '卓溪鄉': 'Zhuoxi Township',
+        // Taitung
+        '臺東市': 'Taitung City', '成功鎮': 'Chenggong Township', '關山鎮': 'Guanshan Township', '卑南鄉': 'Beinan Township',
+        '鹿野鄉': 'Luye Township', '池上鄉': 'Chishang Township', '東河鄉': 'Donghe Township', '長濱鄉': 'Changbin Township',
+        '太麻里鄉': 'Taimali Township', '大武鄉': 'Dawu Township', '綠島鄉': 'Lüdao Township', '海端鄉': 'Haiduan Township',
+        '延平鄉': 'Yanping Township', '金峰鄉': 'Jinfeng Township', '達仁鄉': 'Daren Township', '蘭嶼鄉': 'Lanyu Township',
+        // Pingtung
+        '屏東市': 'Pingtung City', '潮州鎮': 'Chaozhou Township', '東港鎮': 'Donggang Township', '恆春鎮': 'Hengchun Township',
+        '萬丹鄉': 'Wandan Township', '長治鄉': 'Changzhi Township', '麟洛鄉': 'Linluo Township', '九如鄉': 'Jiuru Township',
+        '里港鄉': 'Ligang Township', '高樹鄉': 'Gaoshu Township', '鹽埔鄉': 'Yanpu Township', '內埔鄉': 'Neipu Township',
+        '萬巒鄉': 'Wanluan Township', '竹田鄉': 'Zhutian Township', '三地門鄉': 'Sandimen Township', '霧臺鄉': 'Wutai Township',
+        '瑪家鄉': 'Majia Township', '泰武鄉': 'Taiwu Township', '來義鄉': 'Laiyi Township', '春日鄉': 'Chunri Township',
+        '獅子鄉': 'Shizi Township', '牡丹鄉': 'Mudan Township',
+        // Others (Indigenous Areas)
+        '茂林區': 'Maolin District', '桃源區': 'Taoyuan District', '那瑪夏區': 'Namasia District',
+        '仁愛鄉': 'Ren\'ai Township', '信義鄉': 'Xinyi Township',
+        '阿里山鄉': 'Alishan Township',
+        '復興區': 'Fuxing District',
+        '和平區': 'Heping District',
+        '尖石鄉': 'Jianshi Township', '五峰鄉': 'Wufeng Township',
+        '泰安鄉': 'Tai\'an Township'
     }
 };

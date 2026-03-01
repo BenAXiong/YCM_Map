@@ -132,8 +132,8 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                     onClick={() => onSelectTownship(result)}
                                                     className="w-full text-left px-5 py-4 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-0 flex flex-col"
                                                 >
-                                                    <span className="text-sm font-bold text-stone-900">{result.town}</span>
-                                                    <span className="text-xs text-stone-500">{result.county}</span>
+                                                    <span className="text-sm font-bold text-stone-900">{mt(result.town)}</span>
+                                                    <span className="text-xs text-stone-500">{mt(result.county)}</span>
                                                 </button>
                                             ))}
                                         </motion.div>

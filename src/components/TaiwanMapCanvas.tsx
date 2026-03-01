@@ -35,7 +35,9 @@ type Props = {
     showLvl1Names: boolean;
     showLvl2Names: boolean;
     showLvl3Names: boolean;
+    language: 'zh' | 'en';
 };
+import { useTranslation } from '../hooks/useTranslation';
 
 // Moved helper outside to avoid any closure/initialization issues
 const generateAreaFill = (
@@ -103,9 +105,11 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showLvl1Names,
             showLvl2Names,
             showLvl3Names,
+            language,
         },
         ref
     ) => {
+        const { mt } = useTranslation(language);
         const svgRef = useRef<SVGSVGElement>(null);
         const gTownshipsRef = useRef<SVGGElement | null>(null);
         const gBordersRef = useRef<SVGGElement | null>(null);
@@ -267,7 +271,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('stroke', 'white')
                     .attr('stroke-width', 2)
                     .attr('paint-order', 'stroke')
-                    .text(d => d.name);
+                    .text(d => mt(d.name));
             }
 
             if (showLvl2Names) {
@@ -285,7 +289,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('stroke', 'white')
                     .attr('stroke-width', 1.5)
                     .attr('paint-order', 'stroke')
-                    .text((d: any) => getCountyTownVillageFromProps(d.properties).town);
+                    .text((d: any) => mt(getCountyTownVillageFromProps(d.properties).town));
             }
 
             if (showLvl3Names && villageFeatures) {

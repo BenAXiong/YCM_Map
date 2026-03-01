@@ -70,7 +70,7 @@ const MapSettingsMenu: React.FC<Props> = ({
         >
             <button className="p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 transition-all text-stone-600 flex items-center gap-2">
                 <Settings className={`w-5 h-5 ${isOpen ? 'rotate-90' : ''} transition-transform duration-300`} />
-                <span className="text-xs font-bold uppercase tracking-wider">{t('settings')}</span>
+                <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">{t('settings')}</span>
             </button>
 
             <AnimatePresence>

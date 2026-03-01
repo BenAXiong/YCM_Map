@@ -68,7 +68,7 @@ const CursorTooltip: React.FC<Props> = ({
                             </span>
                         )}
                         <h3 className="text-sm font-bold text-stone-500 uppercase tracking-wider">
-                            {hoveredLabel.county} {hoveredLabel.town}
+                            {mt(hoveredLabel.county)} {mt(hoveredLabel.town)}
                         </h3>
                     </div>
 

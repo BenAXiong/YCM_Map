@@ -1,5 +1,6 @@
 CORE
 improve english translation of dialects
+complete areas names en, seems limited to non-grey areas (and lvl3...)
 title?
 analytics
 reorder dialects

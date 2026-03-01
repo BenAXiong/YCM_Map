@@ -411,7 +411,7 @@ const TaiwanMap: React.FC = () => {
             <span className="hidden md:inline">{t('resetZoom')}</span>
           </button>
 
-          <div className={`flex items-center gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
+          <div className={`flex flex-col items-start gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
             <button
               onClick={handleExport}
               disabled={isExporting}
@@ -486,29 +486,32 @@ const TaiwanMap: React.FC = () => {
 
           if (isMobile) {
             // Mobile step 1: tap to show tooltip AND highlight dialects
-            const sameArea = hoveredTown &&
-              getCountyTownVillageFromProps(hoveredTown).county === county &&
-              getCountyTownVillageFromProps(hoveredTown).town === town &&
-              getCountyTownVillageFromProps(hoveredTown).village === village;
+            // Check if all dialects for this area are currently selected
+            const allPresent = dialectsArray.length > 0 && dialectsArray.every(d => selectedDialects.has(d));
 
-            if (sameArea && !isDetailPinned) {
-              // If already showing tooltip, tap again to pin (Step 2)
-              setIsDetailPinned(true);
-              return;
-            }
-
-            // Highlight dialects on first tap
-            if (dialectsArray.length) {
+            if (allPresent) {
+              // REVERT: If already highlighted, remove dialects and hide tooltip
               setSelectedDialects((prev) => {
                 const next = new Set(prev);
-                dialectsArray.forEach((x) => next.add(x)); // On mobile, maybe just add? Or toggle? 
-                // Let's stick to adding/highlighting for now to avoid confusion on first tap
+                dialectsArray.forEach((x) => next.delete(x));
                 return next;
               });
+              setHoveredTown(null);
+            } else {
+              // HIGHLIGHT: If not highlighted, add dialects and show tooltip
+              if (dialectsArray.length) {
+                setSelectedDialects((prev) => {
+                  const next = new Set(prev);
+                  dialectsArray.forEach((x) => next.add(x));
+                  return next;
+                });
+              }
+              setHoveredTown(props);
+              if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
             }
 
-            setHoveredTown(props);
-            if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
+            // Important: we no longer set isDetailPinned(true) here
+            // It is only triggered via CursorTooltip's onShowMore
             return;
           }
 
@@ -537,6 +540,7 @@ const TaiwanMap: React.FC = () => {
         showLvl1Names={showLvl1Names}
         showLvl2Names={showLvl2Names}
         showLvl3Names={showLvl3Names}
+        language={language}
       />
 
       {/* Filters */}
