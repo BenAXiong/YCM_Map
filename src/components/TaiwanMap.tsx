@@ -65,6 +65,11 @@ const TaiwanMap: React.FC = () => {
     return saved !== null ? JSON.parse(saved) : false;
   });
 
+  // --- Detail state ---
+  const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
+  const [isDetailPinned, setIsDetailPinned] = useState(false);
+  const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
+
   // --- Persistence Effects ---
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SELECTED_DIALECTS, JSON.stringify(Array.from(selectedDialects)));
@@ -180,6 +185,15 @@ const TaiwanMap: React.FC = () => {
     return getDialects(hoveredLabel.county, hoveredLabel.town);
   }, [hoveredTown, hoveredLabel, getDialects, getVillageDialects, showVillageColors]);
 
+  // Sync selected dialect with hover
+  useEffect(() => {
+    if (!hoveredTown) {
+      setSelectedDetailDialect(null);
+    } else if (!selectedDetailDialect && hoveredDialects.length > 0) {
+      setSelectedDetailDialect(hoveredDialects[0]);
+    }
+  }, [hoveredTown, hoveredDialects, selectedDetailDialect]);
+
   return (
     <div className="relative w-full h-screen bg-stone-200 overflow-hidden font-sans">
       {/* Header */}
@@ -211,6 +225,15 @@ const TaiwanMap: React.FC = () => {
             showFilterColors={showFilterColors}
             setShowFilterColors={setShowFilterColors}
           />
+
+          <button
+            onClick={() => canvasRef.current?.resetZoom()}
+            title="Reset zoom"
+            className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
+          >
+            <RotateCcw className="w-4 h-4" />
+            重設縮放
+          </button>
         </div>
       </header>
 
@@ -229,37 +252,48 @@ const TaiwanMap: React.FC = () => {
         getDialects={getDialects}
         getCountyTownVillageFromProps={getCountyTownVillageFromProps}
         onHover={(props, x, y) => {
-          setHoveredTown(props);
+          if (!isDetailPinned) {
+            setHoveredTown(props);
+          }
           setTooltipPos({ x, y });
         }}
-        onLeave={() => setHoveredTown(null)}
+        onLeave={() => {
+          if (!isDetailPinned) setHoveredTown(null);
+        }}
         onClickTown={(props) => {
+          if (!props) {
+            setIsDetailPinned(false);
+            setHoveredTown(null);
+            return;
+          }
+
           const { county, town, village } = getCountyTownVillageFromProps(props);
-          // In village mode, resolve dialects at village level; fall back to township
           const dialectsArray = (showVillageColors && village)
             ? getVillageDialects(county, town, village)
             : getDialects(county, town);
-          if (!dialectsArray.length) return;
 
-          setSelectedDialects((prev) => {
-            const next = new Set(prev);
-            const allPresent = dialectsArray.every((x) => prev.has(x));
-            if (allPresent) dialectsArray.forEach((x) => next.delete(x));
-            else dialectsArray.forEach((x) => next.add(x));
-            return next;
-          });
+          if (dialectsArray.length) {
+            setSelectedDialects((prev) => {
+              const next = new Set(prev);
+              const allPresent = dialectsArray.every((x) => prev.has(x));
+              if (allPresent) dialectsArray.forEach((x) => next.delete(x));
+              else dialectsArray.forEach((x) => next.add(x));
+              return next;
+            });
+
+            setHoveredTown(props);
+            setIsDetailPinned(true);
+          } else {
+            // Click outside or neutral area
+            setIsDetailPinned(false);
+            setHoveredTown(null);
+          }
+        }}
+        onClickBackground={() => {
+          setIsDetailPinned(false);
+          setHoveredTown(null);
         }}
       />
-
-      {/* Reset zoom button */}
-      <button
-        onClick={() => canvasRef.current?.resetZoom()}
-        title="Reset zoom"
-        className="absolute bottom-6 right-6 z-20 p-3 bg-white rounded-2xl shadow-lg border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm"
-      >
-        <RotateCcw className="w-4 h-4" />
-        重設縮放
-      </button>
 
       {/* Filters */}
       <DialectFilterPanel
@@ -283,22 +317,37 @@ const TaiwanMap: React.FC = () => {
       />
 
       <CursorTooltip
-        hoveredTown={hoveredTown}
+        hoveredTown={isDetailPinned ? null : hoveredTown} // Hide simple tooltip if pinned
         showFixedInfo={showFixedInfo}
         tooltipPos={tooltipPos}
         hoveredLabel={hoveredLabel}
         hoveredDialects={hoveredDialects}
         getDialectColor={getDialectColor}
+        onShowMore={() => setIsDetailPinned(true)}
+        onMouseEnter={() => { }}
+        onMouseLeave={() => { }}
       />
 
-      <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-4 items-start">
+      {/* Pinned / Fixed Panel at Top Right */}
+      <div
+        className={`fixed top-6 right-6 z-40 pointer-events-none transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'}`}
+      >
         <FixedInfoPanel
           hoveredTown={hoveredTown}
-          showFixedInfo={showFixedInfo}
+          showFixedInfo={showFixedInfo || isDetailPinned}
           hoveredLabel={hoveredLabel}
           hoveredDialects={hoveredDialects}
           getDialectColor={getDialectColor}
+          selectedDialect={selectedDetailDialect}
+          onSelectDialect={setSelectedDetailDialect}
+          onClose={() => {
+            setIsDetailPinned(false);
+            if (!showFixedInfo) setHoveredTown(null);
+          }}
         />
+      </div>
+
+      <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-4">
         <MapLegend
           selectedDialects={selectedDialects}
           languageGroups={languageGroups}

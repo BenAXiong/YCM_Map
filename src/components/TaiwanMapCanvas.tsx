@@ -27,6 +27,7 @@ type Props = {
     onHover: (props: any, clientX: number, clientY: number) => void;
     onLeave: () => void;
     onClickTown: (props: any) => void;
+    onClickBackground?: () => void;
 };
 
 import villageLookupData from '../data/villages.lookup.json';
@@ -49,6 +50,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             onHover,
             onLeave,
             onClickTown,
+            onClickBackground,
         },
         ref
     ) => {
@@ -305,7 +307,13 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 });
 
             zoomRef.current = zoom;
-            svg.call(zoom);
+            svg.call(zoom)
+                .on('click', (event: any) => {
+                    // Only trigger if clicking directly on the SVG background
+                    if (event.target === svgRef.current && onClickBackground) {
+                        onClickBackground();
+                    }
+                });
 
             // Village borders (Mesh)
             if (villageBorders) {
