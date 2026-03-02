@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['logo-test_t.png'],
+        includeAssets: ['logo-test_t.png', 'logo-test_w.png', 'logo-test.png', 'logo-test-wm.png'],
         manifest: {
           name: '臺灣族語地圖',
           short_name: '族語地圖',
