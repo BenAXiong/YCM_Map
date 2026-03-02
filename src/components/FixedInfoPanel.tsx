@@ -4,13 +4,15 @@ import { Info } from 'lucide-react';
 import type { AreaLabel } from './types';
 
 type Props = {
-    hoveredTown: any | null;
-    showFixedInfo: boolean;
+    isOpen: boolean;
 
     hoveredLabel: AreaLabel;
     hoveredDialects: string[];
 
     getDialectColor: (dialect: string) => string;
+    populationMap: Record<string, number>;
+    pinnedLocations: PinnedMap;
+    onTogglePin: (county: string, town: string, village: string, type: PinType | null) => void;
 
     // Advanced info
     selectedDialect: string | null;
@@ -19,43 +21,119 @@ type Props = {
     language: 'zh' | 'en';
 };
 import { useTranslation } from '../hooks/useTranslation';
+import { MapPin, Heart, Footprints, Trash2 } from 'lucide-react';
+import type { PinType, PinnedMap } from './types';
+
+const PIN_CONFIG: Record<PinType, { color: string; icon: any; label: string; labelEn: string }> = {
+    went: { color: '#10b981', icon: Footprints, label: '踩點', labelEn: 'Been' },
+    loved: { color: '#f59e0b', icon: Heart, label: '喜愛', labelEn: 'Loved' },
+    wanna_go: { color: '#ef4444', icon: MapPin, label: '想去', labelEn: 'Wish' },
+};
 
 const FixedInfoPanel: React.FC<Props> = ({
-    hoveredTown,
-    showFixedInfo,
+    isOpen,
     hoveredLabel,
     hoveredDialects,
     getDialectColor,
+    populationMap,
+    pinnedLocations,
+    onTogglePin,
     selectedDialect,
     onSelectDialect,
     onClose,
     language,
 }) => {
     const { t, mt } = useTranslation(language);
+    const [showPinSelector, setShowPinSelector] = React.useState(false);
+
+    const pinKey = `${hoveredLabel.county}|${hoveredLabel.town}|${hoveredLabel.village || ''}`;
+    const currentPin = pinnedLocations[pinKey] || null;
+
     return (
         <AnimatePresence>
-            {showFixedInfo && hoveredTown && (
+            {isOpen && (
                 <motion.div
                     initial={{ opacity: 0, x: 20, scale: 0.98 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 20, scale: 0.98 }}
                     className="bg-white/80 backdrop-blur-2xl p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/40 w-80 pointer-events-auto h-auto max-h-[95vh] flex flex-col overflow-hidden relative"
                 >
-                    <div className="flex flex-col mb-6">
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex flex-col">
+                            {hoveredLabel.village && (
+                                <span className="block text-3xl font-black text-emerald-600 mb-1 tracking-tighter">
+                                    {hoveredLabel.village}
+                                </span>
+                            )}
+                            <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em]">
+                                {mt(hoveredLabel.county)} / {mt(hoveredLabel.town)}
+                            </h3>
+                        </div>
+
+                        {/* Pin Selector Trigger (Village Mode Only) */}
                         {hoveredLabel.village && (
-                            <span className="block text-3xl font-black text-emerald-600 mb-1 tracking-tighter">
-                                {hoveredLabel.village}
-                            </span>
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowPinSelector(!showPinSelector);
+                                    }}
+                                    className={`p-2 rounded-2xl transition-all ${currentPin ? 'bg-white shadow-lg' : 'hover:bg-stone-50 text-stone-300'}`}
+                                    style={{ color: currentPin ? PIN_CONFIG[currentPin].color : undefined }}
+                                >
+                                    {currentPin ? React.createElement(PIN_CONFIG[currentPin].icon, { className: 'w-6 h-6 fill-current' }) : <MapPin className="w-6 h-6" />}
+                                </button>
+
+                                <AnimatePresence>
+                                    {showPinSelector && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                                            className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl border border-stone-100 p-2 flex flex-col gap-1 z-50 min-w-[100px]"
+                                        >
+                                            {(Object.keys(PIN_CONFIG) as PinType[]).map((type) => {
+                                                const config = PIN_CONFIG[type];
+                                                const Icon = config.icon;
+                                                return (
+                                                    <button
+                                                        key={type}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onTogglePin(hoveredLabel.county, hoveredLabel.town, hoveredLabel.village || '', type);
+                                                            setShowPinSelector(false);
+                                                        }}
+                                                        className={`p-3 rounded-xl transition-all flex items-center gap-3 ${currentPin === type ? 'bg-stone-50' : 'hover:bg-stone-50'}`}
+                                                    >
+                                                        <Icon className="w-5 h-5" style={{ color: config.color, fill: currentPin === type ? config.color : 'none' }} />
+                                                        <span className="text-xs font-bold text-stone-700">{language === 'zh' ? config.label : config.labelEn}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                            {currentPin && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onTogglePin(hoveredLabel.county, hoveredLabel.town, hoveredLabel.village || '', null);
+                                                        setShowPinSelector(false);
+                                                    }}
+                                                    className="p-3 rounded-xl hover:bg-red-50 transition-all flex items-center gap-3 border-t border-stone-50 mt-1"
+                                                >
+                                                    <Trash2 className="w-5 h-5 text-red-400" />
+                                                    <span className="text-xs font-bold text-red-500">{language === 'zh' ? '移除標記' : 'Remove'}</span>
+                                                </button>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         )}
-                        <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em]">
-                            {mt(hoveredLabel.county)} / {mt(hoveredLabel.town)}
-                        </h3>
                     </div>
 
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="absolute top-6 right-6 p-1.5 hover:bg-stone-50 rounded-full text-stone-400 hover:text-stone-600 transition-colors pointer-events-auto"
+                            className="absolute -top-2 -right-2 p-1 bg-white shadow-md hover:bg-stone-50 rounded-full text-stone-400 hover:text-stone-600 transition-colors pointer-events-auto"
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />

@@ -32,6 +32,11 @@ type Props = {
     showSharedDialects: boolean;
     setShowSharedDialects: (v: boolean) => void;
 
+    showPins: boolean;
+    setShowPins: (v: boolean) => void;
+    showPinContours: boolean;
+    setShowPinContours: (v: boolean) => void;
+
     language: 'zh' | 'en';
     setLanguage: (v: 'zh' | 'en') => void;
 };
@@ -57,6 +62,10 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowLvl3Names,
     showSharedDialects,
     setShowSharedDialects,
+    showPins,
+    setShowPins,
+    showPinContours,
+    setShowPinContours,
     language,
     setLanguage,
 }) => {
@@ -114,6 +123,18 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         value={showSharedDialects}
                                         onToggle={() => setShowSharedDialects(!showSharedDialects)}
                                     />
+                                    <div className="pt-2 border-t border-stone-100 space-y-3">
+                                        <ToggleRow
+                                            label={t('showPins')}
+                                            value={showPins}
+                                            onToggle={() => setShowPins(!showPins)}
+                                        />
+                                        <ToggleRow
+                                            label={t('showPinContours')}
+                                            value={showPinContours}
+                                            onToggle={() => setShowPinContours(!showPinContours)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

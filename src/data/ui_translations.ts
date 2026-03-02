@@ -30,8 +30,10 @@ export const uiTranslations = {
         level3Names: '村里名稱 (需放大)',
         boundaryDisplay: '邊界與著色',
         villageColors: '村里細節著色 (Mode B)',
-        sharedDialects: '多重族語著色 (分色)',
-        showFixedInfo: '固定側邊欄 (PC)',
+        sharedDialects: '重疊區域分色',
+        showFixedInfo: '固定資訊面板',
+        showPins: '顯示踩點圖示',
+        showPinContours: '踩點分類邊框',
         languageSelect: '語言 / Language',
 
         // Filter Panel
@@ -80,6 +82,8 @@ export const uiTranslations = {
         villageColors: 'Enble per-village colors',
         sharedDialects: 'Show overlaps',
         showFixedInfo: 'Pinned Sidebar',
+        showPins: 'Display activity pins',
+        showPinContours: 'Pin-themed borders',
         languageSelect: 'Language / 語言',
 
         // Filter Panel

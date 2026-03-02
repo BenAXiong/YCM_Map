@@ -25,3 +25,6 @@ export type TooltipPos = {
     x: number;
     y: number;
 };
+
+export type PinType = 'went' | 'loved' | 'wanna_go';
+export type PinnedMap = Record<string, PinType>; // key: "County|Town|Village"

@@ -18,6 +18,9 @@ type Props = {
     showVillageBorders: boolean;
     showVillageColors: boolean;
     showSharedDialects: boolean;
+    pinnedLocations: PinnedMap;
+    showPins: boolean;
+    showPinContours: boolean;
 
     // Selection coloring
     selectedDialects: Set<string>;
@@ -38,6 +41,13 @@ type Props = {
     language: 'zh' | 'en';
 };
 import { useTranslation } from '../hooks/useTranslation';
+import type { PinnedMap } from './types';
+
+const PIN_COLORS = {
+    went: '#10b981',
+    loved: '#f59e0b',
+    wanna_go: '#ef4444',
+};
 
 // Moved helper outside to avoid any closure/initialization issues
 const generateAreaFill = (
@@ -94,6 +104,9 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showVillageBorders,
             showVillageColors,
             showSharedDialects,
+            pinnedLocations,
+            showPins,
+            showPinContours,
             selectedDialects,
             getDialects,
             getVillageDialects,
@@ -188,9 +201,22 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         if (!dialectsArray.length) return showVillageColors ? '#f5f5f4' : 'transparent';
                         const fill = generateAreaFill(dialectsArray, selectedDialects, showSharedDialects, gDefsRef);
                         return (fill === '#ffffff' && !showVillageColors) ? 'transparent' : fill;
+                    })
+                    .attr('stroke', (d: any) => {
+                        if (!showPinContours) return 'none';
+                        const p = d.properties || {};
+                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        return pin ? PIN_COLORS[pin] : 'none';
+                    })
+                    .attr('stroke-width', (d: any) => {
+                        if (!showPinContours) return 0;
+                        const p = d.properties || {};
+                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        return pinnedLocations[`${county}|${town}|${village || ''}`] ? 1.5 : 0;
                     });
             }
-        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps]);
+        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps, pinnedLocations, showPinContours]);
 
         // 2. Toggle Layers Visibility
         useEffect(() => {
@@ -310,9 +336,52 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .text((d: any) => getCountyTownVillageFromProps(d.properties).village);
             }
 
+            if (showPins && villageFeatures) {
+                const pinnedFeatures = villageFeatures.features.filter((f: any) => {
+                    const { county, town, village } = getCountyTownVillageFromProps(f.properties);
+                    return !!pinnedLocations[`${county}|${town}|${village || ''}`];
+                });
+
+                const pinGroup = gLabels.selectAll('.pin-marker')
+                    .data(pinnedFeatures)
+                    .enter()
+                    .append('g')
+                    .attr('class', 'pin-marker pointer-events-none')
+                    .attr('transform', (d: any) => {
+                        const center = path.centroid(d);
+                        return `translate(${center[0]}, ${center[1] - 4})`;
+                    });
+
+                pinGroup.append('circle')
+                    .attr('r', 10)
+                    .attr('fill', 'white')
+                    .attr('stroke', (d: any) => {
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const type = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        return type ? PIN_COLORS[type] : '#ccc';
+                    })
+                    .attr('stroke-width', 2);
+
+                pinGroup.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .attr('font-size', '8px')
+                    .attr('fill', (d: any) => {
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const type = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        return type ? PIN_COLORS[type] : '#ccc';
+                    })
+                    .attr('font-weight', '900')
+                    .text((d: any) => {
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const type = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        return type === 'loved' ? '♥' : '📍';
+                    });
+            }
+
             const currentTransform = d3.zoomTransform(svgRef.current as any);
             gLabels.attr('transform', currentTransform.toString());
-        }, [showLvl1Names, showLvl2Names, showLvl3Names, townFeatures, villageFeatures, getCountyTownVillageFromProps]);
+        }, [showLvl1Names, showLvl2Names, showLvl3Names, showPins, pinnedLocations, townFeatures, villageFeatures, getCountyTownVillageFromProps]);
 
         // 4. MAIN DRAW
         useEffect(() => {

@@ -14,6 +14,8 @@ import CursorTooltip from './CursorTooltip';
 import FixedInfoPanel from './FixedInfoPanel';
 import MapLegend from './MapLegend';
 import { useTranslation } from '../hooks/useTranslation';
+import { useUserStats } from '../hooks/useUserStats';
+import type { PinnedMap, PinType } from './types';
 
 const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
@@ -41,6 +43,9 @@ const TaiwanMap: React.FC = () => {
     SHOW_LVL3_NAMES: 'ycm_show_lvl3_names',
     SHOW_SHARED_DIALECTS: 'ycm_show_shared_dialects',
     LANGUAGE: 'ycm_language',
+    PINNED_LOCATIONS: 'ycm_pinned_locations',
+    SHOW_PINS: 'ycm_show_pins',
+    SHOW_PIN_CONTOURS: 'ycm_show_pin_contours',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
@@ -96,6 +101,21 @@ const TaiwanMap: React.FC = () => {
     return (saved as 'zh' | 'en') || 'zh';
   });
 
+  const [pinnedLocations, setPinnedLocations] = useState<PinnedMap>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PINNED_LOCATIONS);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [showPins, setShowPins] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_PINS);
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const [showPinContours, setShowPinContours] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_PIN_CONTOURS);
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
   // --- Detail state ---
   const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
   const [isDetailPinned, setIsDetailPinned] = useState(false);
@@ -143,17 +163,52 @@ const TaiwanMap: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
-  }, [language, STORAGE_KEYS.LANGUAGE]);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PINNED_LOCATIONS, JSON.stringify(pinnedLocations));
+  }, [pinnedLocations]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_PINS, JSON.stringify(showPins));
+  }, [showPins]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_PIN_CONTOURS, JSON.stringify(showPinContours));
+  }, [showPinContours]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS, JSON.stringify(showSharedDialects));
   }, [showSharedDialects, STORAGE_KEYS.SHOW_SHARED_DIALECTS]);
 
+  // --- Handlers ---
+  const handleTogglePin = (county: string, town: string, village: string, type: PinType | null) => {
+    const key = `${county}|${town}|${village || ''}`;
+    setPinnedLocations((prev) => {
+      const next = { ...prev };
+      if (!type) {
+        delete next[key];
+      } else {
+        next[key] = type;
+      }
+      return next;
+    });
+  };
+
   const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error } = useTaiwanTopo(
     'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
     (showVillageBorders || showVillageColors) ? 'https://cdn.jsdelivr.net/npm/taiwan-atlas/villages-10t.json' : undefined
   );
-  const { languageGroups, allDialects, getDialects, getCountyTownVillageFromProps, getVillageDialects, populationMap } = useDialectData();
+  const {
+    languageGroups,
+    allDialects,
+    getDialects,
+    getVillageDialects,
+    getCountyTownVillageFromProps,
+    populationMap
+  } = useDialectData();
+
+  const userStats = useUserStats(pinnedLocations);
 
   // --- Search list (from topo features) ---
   const allTownships = useMemo(() => {
@@ -316,6 +371,90 @@ const TaiwanMap: React.FC = () => {
     }
   }, [hoveredTown, hoveredDialects, selectedDetailDialect]);
 
+  // --- Map Interaction Handlers ---
+  const handleHover = (props: any, x: number, y: number) => {
+    if (isMobile) return; // Mobile uses onClick for tooltip
+    if (!isDetailPinned) {
+      setHoveredTown(props);
+    }
+    setTooltipPos({ x, y });
+  };
+
+  const handleLeave = () => {
+    if (isMobile) return;
+    if (!isDetailPinned) {
+      setHoveredTown(null);
+      setSelectedDetailDialect(null);
+    }
+  };
+
+  const onClickTown = (props: any, x: number, y: number) => {
+    if (!props) {
+      setIsDetailPinned(false);
+      setHoveredTown(null);
+      setSelectedDetailDialect(null);
+      return;
+    }
+
+    const { county, town, village } = getCountyTownVillageFromProps(props);
+    const dialectsArray = (showVillageColors && village)
+      ? getVillageDialects(county, town, village)
+      : getDialects(county, town);
+
+    if (isMobile) {
+      // Mobile step 1: tap to show tooltip AND highlight dialects
+      // Check if all dialects for this area are currently selected
+      const allPresent = dialectsArray.length > 0 && dialectsArray.every(d => selectedDialects.has(d));
+
+      if (allPresent) {
+        // REVERT: If already highlighted, remove dialects and hide tooltip
+        setSelectedDialects((prev) => {
+          const next = new Set(prev);
+          dialectsArray.forEach((d) => next.delete(d));
+          return next;
+        });
+        setHoveredTown(null);
+        setSelectedDetailDialect(null);
+      } else {
+        // HIGHLIGHT: If not highlighted, add dialects and show tooltip
+        if (dialectsArray.length) {
+          setSelectedDialects((prev) => {
+            const next = new Set(prev);
+            dialectsArray.forEach((x) => next.add(x));
+            return next;
+          });
+        }
+        setHoveredTown(props);
+        if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
+        if (dialectsArray.length > 0) setSelectedDetailDialect(dialectsArray[0]);
+      }
+
+      // Important: we no longer set isDetailPinned(true) here
+      // It is only triggered via CursorTooltip's onShowMore
+      return;
+    }
+
+    // Desktop logic: Toggle dialects and Pin immediately
+    if (dialectsArray.length) {
+      setSelectedDialects((prev) => {
+        const next = new Set(prev);
+        const allPresent = dialectsArray.every((x) => prev.has(x));
+        if (allPresent) dialectsArray.forEach((x) => next.delete(x));
+        else dialectsArray.forEach((x) => next.add(x));
+        return next;
+      });
+
+      setHoveredTown(props);
+      setIsDetailPinned(true);
+      if (dialectsArray.length > 0) setSelectedDetailDialect(dialectsArray[0]);
+    } else {
+      // Click outside or neutral area
+      setIsDetailPinned(false);
+      setHoveredTown(null);
+      setSelectedDetailDialect(null);
+    }
+  };
+
   return (
     <div
       ref={mapContainerRef}
@@ -398,6 +537,10 @@ const TaiwanMap: React.FC = () => {
             setShowLvl3Names={setShowLvl3Names}
             showSharedDialects={showSharedDialects}
             setShowSharedDialects={setShowSharedDialects}
+            showPins={showPins}
+            setShowPins={setShowPins}
+            showPinContours={showPinContours}
+            setShowPinContours={setShowPinContours}
             language={language}
             setLanguage={setLanguage}
           />
@@ -457,85 +600,23 @@ const TaiwanMap: React.FC = () => {
         showVillageBorders={showVillageBorders}
         showVillageColors={showVillageColors}
         showSharedDialects={showSharedDialects}
+        pinnedLocations={pinnedLocations}
+        showPins={showPins && showVillageColors}
+        showPinContours={showPinContours && showVillageColors}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
         getVillageDialects={getVillageDialects}
         getCountyTownVillageFromProps={getCountyTownVillageFromProps}
-        onHover={(props, x, y) => {
-          if (isMobile) return; // Mobile uses onClick for tooltip
-          if (!isDetailPinned) {
-            setHoveredTown(props);
-          }
-          setTooltipPos({ x, y });
-        }}
-        onLeave={() => {
-          if (isMobile) return;
-          if (!isDetailPinned) setHoveredTown(null);
-        }}
-        onClickTown={(props, x, y) => {
-          if (!props) {
-            setIsDetailPinned(false);
-            setHoveredTown(null);
-            return;
-          }
-
-          const { county, town, village } = getCountyTownVillageFromProps(props);
-          const dialectsArray = (showVillageColors && village)
-            ? getVillageDialects(county, town, village)
-            : getDialects(county, town);
-
-          if (isMobile) {
-            // Mobile step 1: tap to show tooltip AND highlight dialects
-            // Check if all dialects for this area are currently selected
-            const allPresent = dialectsArray.length > 0 && dialectsArray.every(d => selectedDialects.has(d));
-
-            if (allPresent) {
-              // REVERT: If already highlighted, remove dialects and hide tooltip
-              setSelectedDialects((prev) => {
-                const next = new Set(prev);
-                dialectsArray.forEach((x) => next.delete(x));
-                return next;
-              });
-              setHoveredTown(null);
-            } else {
-              // HIGHLIGHT: If not highlighted, add dialects and show tooltip
-              if (dialectsArray.length) {
-                setSelectedDialects((prev) => {
-                  const next = new Set(prev);
-                  dialectsArray.forEach((x) => next.add(x));
-                  return next;
-                });
-              }
-              setHoveredTown(props);
-              if (x !== undefined && y !== undefined) setTooltipPos({ x, y });
-            }
-
-            // Important: we no longer set isDetailPinned(true) here
-            // It is only triggered via CursorTooltip's onShowMore
-            return;
-          }
-
-          // Desktop logic: Toggle dialects and Pin immediately
-          if (dialectsArray.length) {
-            setSelectedDialects((prev) => {
-              const next = new Set(prev);
-              const allPresent = dialectsArray.every((x) => prev.has(x));
-              if (allPresent) dialectsArray.forEach((x) => next.delete(x));
-              else dialectsArray.forEach((x) => next.add(x));
-              return next;
-            });
-
-            setHoveredTown(props);
-            setIsDetailPinned(true);
-          } else {
-            // Click outside or neutral area
-            setIsDetailPinned(false);
-            setHoveredTown(null);
-          }
-        }}
+        onHover={handleHover}
+        onLeave={handleLeave}
+        onClickTown={onClickTown}
         onClickBackground={() => {
-          setIsDetailPinned(false);
-          setHoveredTown(null);
+          if (selectedDetailDialect) {
+            setSelectedDetailDialect(null);
+          }
+          if (hoveredTown) {
+            handleLeave();
+          }
         }}
         showLvl1Names={showLvl1Names}
         showLvl2Names={showLvl2Names}
@@ -543,57 +624,62 @@ const TaiwanMap: React.FC = () => {
         language={language}
       />
 
-      {/* Filters */}
       <DialectFilterPanel
         isMobile={isMobile}
         isOpen={isFilterOpen && !isExporting}
         setIsOpen={setIsFilterOpen}
-        languageGroups={languageGroups}
-        populationMap={populationMap}
-        expandedGroups={expandedGroups}
-        setExpandedGroups={setExpandedGroups}
-        selectedDialects={selectedDialects}
-        onToggleLanguage={toggleLanguage}
-        onToggleDialect={toggleDialect}
-        onSelectAll={selectAll}
-        onClearAll={clearAll}
+        language={language}
+        userStats={userStats}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         searchResults={searchResults}
         onSelectTownship={handleTownshipSelect}
+        expandedGroups={expandedGroups}
+        setExpandedGroups={setExpandedGroups}
+        selectedDialects={selectedDialects}
+        languageGroups={languageGroups}
+        populationMap={populationMap}
+        onToggleDialect={toggleDialect}
+        onToggleLanguage={toggleLanguage}
+        onSelectAll={selectAll}
+        onClearAll={clearAll}
         getDialectColor={getDialectColor}
-        language={language}
       />
 
       <CursorTooltip
-        hoveredTown={isDetailPinned ? null : hoveredTown} // Hide simple tooltip if pinned
+        hoveredTown={hoveredTown}
         showFixedInfo={showFixedInfo}
         tooltipPos={tooltipPos}
         hoveredLabel={hoveredLabel}
         hoveredDialects={hoveredDialects}
         getDialectColor={getDialectColor}
         populationMap={populationMap}
+        pinnedLocations={pinnedLocations}
+        onTogglePin={handleTogglePin}
         onShowMore={() => setIsDetailPinned(true)}
-        onMouseEnter={() => { }}
-        onMouseLeave={() => { }}
+        onMouseEnter={() => {
+          const win = window as any;
+          if (win.hoverTimeout_ycm) clearTimeout(win.hoverTimeout_ycm);
+        }}
+        onMouseLeave={handleLeave}
         language={language}
       />
 
-      {/* Pinned / Fixed Panel at Top Right */}
       <div
         className={`fixed top-6 right-6 z-40 pointer-events-none transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'} ${isExporting ? 'hidden' : ''}`}
       >
         <FixedInfoPanel
-          hoveredTown={hoveredTown}
-          showFixedInfo={showFixedInfo || isDetailPinned}
+          isOpen={showFixedInfo || isDetailPinned ? hoveredTown !== null : false}
           hoveredLabel={hoveredLabel}
           hoveredDialects={hoveredDialects}
           getDialectColor={getDialectColor}
+          populationMap={populationMap}
+          pinnedLocations={pinnedLocations}
+          onTogglePin={handleTogglePin}
           selectedDialect={selectedDetailDialect}
           onSelectDialect={setSelectedDetailDialect}
           onClose={() => {
             setIsDetailPinned(false);
-            if (!showFixedInfo) setHoveredTown(null);
           }}
           language={language}
         />
@@ -603,7 +689,6 @@ const TaiwanMap: React.FC = () => {
         <MapLegend
           isMobile={isMobile}
           alwaysExpanded={isExporting}
-
           selectedDialects={selectedDialects}
           languageGroups={languageGroups}
           getDialectColor={getDialectColor}

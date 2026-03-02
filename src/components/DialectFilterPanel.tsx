@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft, Footprints } from 'lucide-react';
+import { useTranslation } from '../hooks/useTranslation';
+import type { UserStats } from '../hooks/useUserStats';
 
 type Props = {
     isMobile: boolean;
@@ -9,6 +11,7 @@ type Props = {
 
     languageGroups: Record<string, string[]>;
     populationMap: Record<string, number>;
+    userStats: UserStats;
     expandedGroups: Set<string>;
     setExpandedGroups: React.Dispatch<React.SetStateAction<Set<string>>>;
 
@@ -28,7 +31,6 @@ type Props = {
     getDialectColor: (dialect: string) => string;
     language: 'zh' | 'en';
 };
-import { useTranslation } from '../hooks/useTranslation';
 
 const DialectFilterPanel: React.FC<Props> = ({
     isMobile,
@@ -36,6 +38,7 @@ const DialectFilterPanel: React.FC<Props> = ({
     setIsOpen,
     languageGroups,
     populationMap,
+    userStats,
     expandedGroups,
     setExpandedGroups,
     selectedDialects,
@@ -160,17 +163,39 @@ const DialectFilterPanel: React.FC<Props> = ({
                             )}
                         </div>
 
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto p-5 pt-2 space-y-2 custom-scrollbar">
+                        {/* Global Stats Section */}
+                        <div className="px-6 py-4 bg-emerald-50/50 border-b border-stone-100">
+                            <div className="flex justify-between items-end mb-2">
+                                <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Footprints className="w-3 h-3" />
+                                    {language === 'zh' ? '探索進度' : 'Exploration'}
+                                </h3>
+                                <span className="text-[10px] font-mono font-bold text-emerald-600">
+                                    {userStats.pinnedCount} / {userStats.totalVillages}
+                                </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-stone-200 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(userStats.pinnedCount / userStats.totalVillages) * 100}%` }}
+                                    className="h-full bg-emerald-500 rounded-full"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-6 pt-4 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
                             {Object.entries(languageGroups).map(([lang, dialects]) => {
                                 const dialectsArray = dialects as string[];
                                 const allSelected =
                                     dialectsArray.length > 0 && dialectsArray.every((d) => selectedDialects.has(d));
                                 const someSelected =
                                     !allSelected && dialectsArray.some((d) => selectedDialects.has(d));
+                                const isExpanded = expandedGroups.has(lang);
+                                const isAnySelected = allSelected || someSelected;
+                                const pop = populationMap[lang] || 0;
 
                                 return (
-                                    <div key={lang} className={`border border-stone-50 rounded-[1.5rem] overflow-hidden transition-all ${expandedGroups.has(lang) ? 'shadow-md ring-1 ring-emerald-500/10' : ''}`}>
+                                    <div key={lang} className={`border border-stone-50 rounded-[1.5rem] overflow-hidden transition-all ${isExpanded ? 'shadow-md ring-1 ring-emerald-500/10' : ''}`}>
                                         <div
                                             className="flex items-center justify-between px-4 py-3.5 transition-colors cursor-pointer group/row"
                                             style={{
@@ -195,16 +220,23 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                 </button>
 
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-sm text-stone-800">{mt(lang)}</span>
-                                                    {someSelected && !expandedGroups.has(lang) && (
-                                                        <span className="text-[10px] text-emerald-600 font-bold">
-                                                            {language === 'zh' ? '已選' : 'Selected'} {dialectsArray.filter(d => selectedDialects.has(d)).length} {language === 'zh' ? '類' : 'types'}
+                                                    <span className={`text-sm font-bold tracking-tight ${isAnySelected ? 'text-emerald-900' : 'text-stone-700'}`}>
+                                                        {mt(lang)}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[10px] font-medium text-stone-400 uppercase tracking-widest">
+                                                            {pop.toLocaleString()}
                                                         </span>
-                                                    )}
+                                                        {userStats.byLanguage[lang]?.total > 0 && (
+                                                            <span className="text-[10px] font-bold text-emerald-600/80 bg-emerald-50 px-1 rounded">
+                                                                📍 {userStats.byLanguage[lang].pinned}/{userStats.byLanguage[lang].total}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
                                                 <div className="relative group/info">
                                                     <Info className="w-4 h-4 text-stone-300 hover:text-emerald-500 transition-colors" />
                                                     <div className="absolute right-0 bottom-full mb-2 bg-stone-900 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl font-bold">
@@ -212,15 +244,14 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                         <div className="absolute top-full right-2 border-4 border-transparent border-t-stone-900" />
                                                     </div>
                                                 </div>
-                                                {expandedGroups.has(lang) ? (
-                                                    <ChevronDown className="w-4 h-4 text-stone-400" />
-                                                ) : (
-                                                    <ChevronRight className="w-4 h-4 text-stone-400" />
+                                                {isAnySelected && (
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                                 )}
+                                                {isExpanded ? <ChevronDown className="w-4 h-4 text-stone-400" /> : <ChevronRight className="w-4 h-4 text-stone-400" />}
                                             </div>
                                         </div>
 
-                                        {expandedGroups.has(lang) && (
+                                        {isExpanded && (
                                             <div className="p-3 bg-white grid grid-cols-1 gap-1.5">
                                                 {dialectsArray.map((dialect) => {
                                                     const selected = selectedDialects.has(dialect);
@@ -245,7 +276,14 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                             >
                                                                 {selected && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                                                             </div>
-                                                            <span className={`text-sm ${selected ? 'font-bold text-stone-900' : 'text-stone-600'}`}>{mt(dialect)}</span>
+                                                            <span className={`text-sm ${selected ? 'font-bold text-stone-900' : 'text-stone-600'}`}>
+                                                                {mt(dialect)}
+                                                                {userStats.byDialect[dialect] && userStats.byDialect[dialect].total > 0 && (
+                                                                    <span className="ml-1.5 opacity-60 text-[8px] font-mono">
+                                                                        ({userStats.byDialect[dialect].pinned}/{userStats.byDialect[dialect].total})
+                                                                    </span>
+                                                                )}
+                                                            </span>
                                                         </div>
                                                     );
                                                 })}
