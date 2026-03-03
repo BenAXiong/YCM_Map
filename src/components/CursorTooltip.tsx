@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import type { AreaLabel, TooltipPos } from './types';
 
 type Props = {
@@ -9,6 +9,7 @@ type Props = {
     tooltipPos: TooltipPos;
 
     hoveredLabel: AreaLabel;
+    hoveredLabelKey?: string;
     hoveredDialects: string[];
 
     getDialectColor: (dialect: string) => string;
@@ -16,6 +17,7 @@ type Props = {
     pinnedLocations: PinnedMap;
     onTogglePin: (county: string, town: string, village: string, type: PinType | null) => void;
     onShowMore: () => void;
+    onClose?: () => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
     language: 'zh' | 'en';
@@ -42,6 +44,7 @@ const CursorTooltip: React.FC<Props> = ({
     pinnedLocations,
     onTogglePin,
     onShowMore,
+    onClose,
     onMouseEnter,
     onMouseLeave,
     language,
@@ -164,6 +167,17 @@ const CursorTooltip: React.FC<Props> = ({
                                 <div className="w-2 h-2 bg-stone-900 rotate-45 absolute -bottom-1 right-2" />
                             </div>
                         </div>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose?.();
+                            }}
+                            className="p-1 hover:bg-stone-100 rounded-full transition-colors"
+                        >
+                            <X className="w-4 h-4 text-stone-300 hover:text-stone-600 transition-colors" />
+                        </button>
                     </div>
 
                     <div className="mt-4 space-y-3">

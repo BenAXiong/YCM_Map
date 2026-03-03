@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: ['logo-test_t.png', 'logo-test_w.png', 'logo-test.png', 'logo-test-wm.png'],
         manifest: {
           name: '臺灣族語地圖',

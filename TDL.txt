@@ -1,19 +1,18 @@
 CORE
 basic analytics: users, ?
-title?
 ?optimize loading
-tabs at bottom (phrases, culture, exploration, notes)
+tabs at bottom: phrases, culture, exploration, notes, options (themes, ?)
+fix search fonction (lang vs places)
+title
 
 FEATURES
 per area user notes
 
 UI
 add settings icons
-make legend draggable, esp on mobile
 enable single area coloring vs shared dialects vs shared language
 add "about" overlay
 filter avoid wiggle when scroll bar activates
-match mobile language colors in filter with pc (and order)
 click on legend item to highlight area
 remove double click to zoom
 adapting lvl2 names font size

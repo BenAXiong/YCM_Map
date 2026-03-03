@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2, Smartphone } from 'lucide-react';
+import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2, Smartphone, Layout } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toPng } from 'html-to-image';
 import { getDialectColor } from './dialectColors';
@@ -137,6 +137,8 @@ const TaiwanMap: React.FC = () => {
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [hideLegendForExport, setHideLegendForExport] = useState(false);
+  const [activeMobileMenu, setActiveMobileMenu] = useState<'export' | 'share' | 'reset' | null>(null);
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -299,9 +301,10 @@ const TaiwanMap: React.FC = () => {
   };
   const clearAll = () => setSelectedDialects(new Set());
 
-  const handleExport = async () => {
+  const handleExport = async (options?: { hideLegend?: boolean; share?: boolean }) => {
     if (!mapContainerRef.current) return;
     setIsExporting(true);
+    if (options?.hideLegend) setHideLegendForExport(true);
 
     // Brief delay to allow React to hide elements and expand legend
     setTimeout(async () => {
@@ -311,22 +314,34 @@ const TaiwanMap: React.FC = () => {
           quality: 0.95,
           pixelRatio: 2,
           filter: (node) => {
-            // Further safety check if needed, though state is primary
             const el = node as HTMLElement;
             if (el.classList?.contains('export-hide')) return false;
             return true;
           }
         });
 
-        const link = document.createElement('a');
-        link.download = `taiwan-dialects-${new Date().toISOString().split('T')[0]}.png`;
-        link.href = dataUrl;
-        link.click();
+        if (options?.share && navigator.share) {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `taiwan-map-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+
+          await navigator.share({
+            files: [file],
+            title: t('title'),
+            text: t('shareText')
+          });
+        } else {
+          const link = document.createElement('a');
+          link.download = `taiwan-dialects-${new Date().toISOString().split('T')[0]}.png`;
+          link.href = dataUrl;
+          link.click();
+        }
       } catch (err) {
-        console.error('Export failed:', err);
-        alert(t('exportFailed'));
+        console.error('Export/Share failed:', err);
+        if (!options?.share) alert(t('exportFailed'));
       } finally {
         setIsExporting(false);
+        setHideLegendForExport(false);
       }
     }, 500);
   };
@@ -408,6 +423,12 @@ const TaiwanMap: React.FC = () => {
       setHoveredTown(null);
       setSelectedDetailDialect(null);
     }
+  };
+
+  const handleCloseTooltip = () => {
+    setIsDetailPinned(false);
+    setHoveredTown(null);
+    setSelectedDetailDialect(null);
   };
 
   const onClickTown = (props: any, x: number, y: number) => {
@@ -556,7 +577,7 @@ const TaiwanMap: React.FC = () => {
             {/* Export + Share — desktop only, icon-only with hover expand */}
             <div className="hidden md:flex flex-col gap-2">
               <button
-                onClick={handleExport}
+                onClick={() => handleExport()}
                 disabled={isExporting}
                 title={t('exportImage')}
                 className="group flex-1 flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all text-stone-600 disabled:opacity-50 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200"
@@ -612,34 +633,132 @@ const TaiwanMap: React.FC = () => {
             <button
               onClick={() => canvasRef.current?.resetZoom()}
               title={t('resetZoom')}
-              className={`group flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all text-stone-600 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200 ${isExporting ? 'hidden' : ''}`}
+              className={`hidden md:flex items-center justify-center w-[42px] h-[42px] bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all text-stone-600 ${isExporting ? 'hidden' : ''}`}
             >
-              <RotateCcw className="w-4 h-4 shrink-0" />
-              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('resetZoom')}</span>
+              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
 
           <div className={`flex flex-col items-start gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
-            {/* Mobile-only export button */}
-            <button
-              onClick={handleExport}
-              disabled={isExporting}
-              title={t('exportImage')}
-              className="md:hidden p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit disabled:opacity-50"
-            >
-              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
-              <span>{t('exportImage')}</span>
-            </button>
+            {/* Mobile Actions */}
+            <div className="md:hidden flex flex-col items-start gap-2">
+              {/* Capture Button */}
+              <div
+                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeMobileMenu === 'export' ? 'bg-stone-50 border-stone-300' : ''}`}
+              >
+                <button
+                  onClick={() => setActiveMobileMenu(activeMobileMenu === 'export' ? null : 'export')}
+                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeMobileMenu === 'export' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
+                >
+                  <ImageDown className={`w-5 h-5 text-stone-600 transition-transform ${activeMobileMenu === 'export' ? 'scale-110' : ''}`} />
+                </button>
 
-            {/* Mobile-only share button */}
-            <button
-              onClick={handleShare}
-              title={t('share')}
-              className="md:hidden p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>{t('share')}</span>
-            </button>
+                <AnimatePresence>
+                  {activeMobileMenu === 'export' && (
+                    <motion.div
+                      key="export-content"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      className="flex items-center overflow-hidden"
+                    >
+                      <span className="text-xs font-bold text-stone-700 uppercase tracking-widest px-3 whitespace-nowrap">
+                        {t('exportImage')}
+                      </span>
+                      <div className="flex items-center gap-1 pr-1.5 border-l border-stone-200 ml-1 py-1">
+                        <button
+                          onClick={() => {
+                            handleExport();
+                            setActiveMobileMenu(null);
+                          }}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
+                        >
+                          <Layout className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('exportFull')}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleExport({ hideLegend: true });
+                            setActiveMobileMenu(null);
+                          }}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
+                        >
+                          <MapIcon className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('exportNoLegend')}</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Share Button */}
+              <div
+                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeMobileMenu === 'share' ? 'bg-stone-50 border-stone-300' : ''}`}
+              >
+                <button
+                  onClick={() => setActiveMobileMenu(activeMobileMenu === 'share' ? null : 'share')}
+                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeMobileMenu === 'share' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
+                >
+                  <Share2 className={`w-5 h-5 text-stone-600 transition-transform ${activeMobileMenu === 'share' ? 'scale-110' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {activeMobileMenu === 'share' && (
+                    <motion.div
+                      key="share-content"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      className="flex items-center overflow-hidden"
+                    >
+                      <span className="text-xs font-bold text-stone-700 uppercase tracking-widest px-3 whitespace-nowrap">
+                        {t('share')}
+                      </span>
+                      <div className="flex items-center gap-1 pr-1.5 border-l border-stone-200 ml-1 py-1">
+                        <button
+                          onClick={() => {
+                            handleShare();
+                            setActiveMobileMenu(null);
+                          }}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
+                        >
+                          <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('shareURL')}</span>
+                        </button>
+                        {navigator.share && (
+                          <button
+                            onClick={() => {
+                              handleExport({ share: true });
+                              setActiveMobileMenu(null);
+                            }}
+                            className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
+                          >
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('sharePic')}</span>
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Reset Map Zoom Button */}
+              <div
+                className="flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden"
+              >
+                <button
+                  onClick={() => {
+                    setActiveMobileMenu(null);
+                    canvasRef.current?.resetZoom();
+                  }}
+                  className="h-full w-11 flex items-center justify-center hover:bg-stone-50 active:scale-95 transition-all text-stone-600"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
 
             {deferredPrompt && (
               <button
@@ -724,6 +843,7 @@ const TaiwanMap: React.FC = () => {
         pinnedLocations={pinnedLocations}
         onTogglePin={handleTogglePin}
         onShowMore={() => setShowDetailPanel(true)}
+        onClose={handleCloseTooltip}
         onMouseEnter={() => {
           (window as any).isHoveringTooltip_ycm = true;
           const win = window as any;
@@ -772,17 +892,19 @@ const TaiwanMap: React.FC = () => {
         />
       </div>
 
-      <div className="absolute bottom-8 left-6 z-10 pointer-events-none flex flex-col gap-4">
-        <MapLegend
-          isMobile={isMobile}
-          alwaysExpanded={isExporting}
-          selectedDialects={selectedDialects}
-          languageGroups={languageGroups}
-          getDialectColor={getDialectColor}
-          language={language}
-          showUsageNames={showDialectUsageNames}
-        />
-      </div>
+      {!(isExporting && hideLegendForExport) && (
+        <div className="absolute bottom-8 left-6 z-10 pointer-events-none flex flex-col gap-4">
+          <MapLegend
+            isMobile={isMobile}
+            alwaysExpanded={isExporting}
+            selectedDialects={selectedDialects}
+            languageGroups={languageGroups}
+            getDialectColor={getDialectColor}
+            language={language}
+            showUsageNames={showDialectUsageNames}
+          />
+        </div>
+      )}
     </div>
   );
 };

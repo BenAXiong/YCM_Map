@@ -318,7 +318,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             const height = svgRef.current.clientHeight || window.innerHeight;
             const projection = d3.geoMercator()
                 .center([120.9, 23.65])
-                .scale(height * 14)
+                .scale(height * 11)
                 .translate([width / 2, height / 2]);
             const path = d3.geoPath().projection(projection);
 
@@ -426,7 +426,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
             const projection = d3.geoMercator()
                 .center([120.9, 23.65])
-                .scale(height * 14)
+                .scale(height * 11)
                 .translate([width / 2, height / 2]);
             const path = d3.geoPath().projection(projection);
 

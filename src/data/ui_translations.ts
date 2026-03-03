@@ -3,8 +3,8 @@ export type Language = 'zh' | 'en';
 export const uiTranslations = {
     zh: {
         // Header & Global
-        title: '臺灣族語分佈地圖',
-        subtitle: '臺灣原住民族語分佈',
+        title: 'work in progress', // 臺灣族語分佈地圖
+        subtitle: '以~', // 臺灣原住民族語分佈
         resetZoom: '重設縮放',
         exportImage: '匯出圖片',
         share: '分享網站',
@@ -17,6 +17,10 @@ export const uiTranslations = {
         exportFailed: '匯出失敗，請重試',
         shareText: '快來看看臺灣原住民語的分佈地圖！',
         urlCopied: '網址已複製到剪貼簿！',
+        exportFull: '完整',
+        exportNoLegend: '僅地圖',
+        shareURL: '連結',
+        sharePic: '圖片',
 
         // Settings Menu
         settings: '地圖設定',
@@ -70,6 +74,10 @@ export const uiTranslations = {
         exportFailed: 'Export failed, please try again',
         shareText: 'Check out the distribution map of Taiwan Indigenous Languages!',
         urlCopied: 'URL copied to clipboard!',
+        exportFull: 'Full',
+        exportNoLegend: 'No Legend',
+        shareURL: 'URL',
+        sharePic: 'Pic',
 
         // Settings Menu
         settings: 'Map Settings',
