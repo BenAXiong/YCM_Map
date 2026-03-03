@@ -261,7 +261,7 @@ const MapSettingsMenu: React.FC<Props> = ({
 
                             <div className="mt-4 pt-2 border-t border-stone-100 flex justify-between items-center opacity-30 select-none px-1">
                                 <span className="text-[9px] font-black tracking-tighter text-stone-400">BUILD VER</span>
-                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1349</span>
+                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1357</span>
                             </div>
                         </div>
                     </motion.div>

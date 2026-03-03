@@ -144,7 +144,7 @@ const TaiwanMap: React.FC = () => {
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [hideLegendForExport, setHideLegendForExport] = useState(false);
-  const [activeMobileMenu, setActiveMobileMenu] = useState<'export' | 'share' | 'reset' | null>(null);
+  const [activeActionMenu, setActiveActionMenu] = useState<'export' | 'share' | 'reset' | null>(null);
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -606,25 +606,100 @@ const TaiwanMap: React.FC = () => {
               {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
             </motion.div>
 
-            {/* Export + Share — desktop only, icon-only with hover expand */}
-            <div className="hidden md:flex flex-col gap-2">
-              <button
-                onClick={() => handleExport()}
-                disabled={isExporting}
-                title={t('exportImage')}
-                className="group flex-1 flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all text-stone-600 disabled:opacity-50 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200"
+            {/* Export + Share — desktop */}
+            <div className="hidden md:flex flex-col items-start gap-2">
+              <div
+                className={`flex items-center h-[42px] bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeActionMenu === 'export' ? 'bg-white border-stone-300' : ''}`}
+                onMouseEnter={() => { if (!activeActionMenu) setActiveActionMenu('export'); }}
+                onMouseLeave={() => { if (activeActionMenu === 'export') setActiveActionMenu(null); }}
               >
-                {isExporting ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <ImageDown className="w-4 h-4 shrink-0" />}
-                <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('exportImage')}</span>
-              </button>
-              <button
-                onClick={handleShare}
-                title={t('share')}
-                className="group flex-1 flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all text-stone-600 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200"
+                <button
+                  onClick={() => setActiveActionMenu(activeActionMenu === 'export' ? null : 'export')}
+                  disabled={isExporting}
+                  className={`h-full w-[42px] flex items-center justify-center transition-colors ${activeActionMenu === 'export' ? 'bg-stone-100' : 'hover:bg-stone-50'}`}
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <ImageDown className="w-4 h-4 text-stone-600" />}
+                </button>
+
+                <AnimatePresence>
+                  {activeActionMenu === 'export' && (
+                    <motion.div
+                      key="export-desktop-content"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      className="flex items-center overflow-hidden"
+                    >
+                      <span className="text-xs font-bold text-stone-700 uppercase tracking-widest px-3 whitespace-nowrap">
+                        {t('exportImage')}
+                      </span>
+                      <div className="flex items-center gap-1 pr-1.5 border-l border-stone-200 ml-1 py-1">
+                        <button
+                          onClick={() => handleExport()}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-100 rounded-xl transition-colors"
+                        >
+                          <Layout className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('exportFull')}</span>
+                        </button>
+                        <button
+                          onClick={() => handleExport({ hideLegend: true })}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-100 rounded-xl transition-colors"
+                        >
+                          <MapIcon className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('exportNoLegend')}</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div
+                className={`flex items-center h-[42px] bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeActionMenu === 'share' ? 'bg-white border-stone-300' : ''}`}
+                onMouseEnter={() => { if (!activeActionMenu) setActiveActionMenu('share'); }}
+                onMouseLeave={() => { if (activeActionMenu === 'share') setActiveActionMenu(null); }}
               >
-                <Share2 className="w-4 h-4 shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('share')}</span>
-              </button>
+                <button
+                  onClick={() => setActiveActionMenu(activeActionMenu === 'share' ? null : 'share')}
+                  className={`h-full w-[42px] flex items-center justify-center transition-colors ${activeActionMenu === 'share' ? 'bg-stone-100' : 'hover:bg-stone-50'}`}
+                >
+                  <Share2 className="w-4 h-4 text-stone-600" />
+                </button>
+
+                <AnimatePresence>
+                  {activeActionMenu === 'share' && (
+                    <motion.div
+                      key="share-desktop-content"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      className="flex items-center overflow-hidden"
+                    >
+                      <span className="text-xs font-bold text-stone-700 uppercase tracking-widest px-3 whitespace-nowrap">
+                        {t('share')}
+                      </span>
+                      <div className="flex items-center gap-1 pr-1.5 border-l border-stone-200 ml-1 py-1">
+                        <button
+                          onClick={() => handleShare()}
+                          className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-100 rounded-xl transition-colors"
+                        >
+                          <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('shareURL')}</span>
+                        </button>
+                        {navigator.share && (
+                          <button
+                            onClick={() => handleExport({ share: true })}
+                            className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-100 rounded-xl transition-colors"
+                          >
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-[10px] font-black text-stone-700 uppercase tracking-tighter whitespace-nowrap">{t('sharePic')}</span>
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
 
@@ -664,13 +739,35 @@ const TaiwanMap: React.FC = () => {
               mapBgColor={mapBgColor}
               setMapBgColor={setMapBgColor}
             />
-            <button
-              onClick={() => canvasRef.current?.resetZoom()}
-              title={t('resetZoom')}
-              className={`hidden md:flex items-center justify-center w-[42px] h-[42px] bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all text-stone-600 ${isExporting ? 'hidden' : ''}`}
+            <div
+              className={`hidden md:flex items-center h-[42px] bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto overflow-hidden transition-all duration-300 ${isExporting ? 'hidden' : ''}`}
+              onMouseEnter={() => { if (!activeActionMenu) setActiveActionMenu('reset'); }}
+              onMouseLeave={() => { if (activeActionMenu === 'reset') setActiveActionMenu(null); }}
             >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+              <button
+                onClick={() => {
+                  canvasRef.current?.resetZoom();
+                  trackEvent('reset_map_zoom');
+                }}
+                className={`h-full w-[42px] flex items-center justify-center transition-colors ${activeActionMenu === 'reset' ? 'bg-stone-100' : 'hover:bg-stone-50'} text-stone-600`}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <AnimatePresence>
+                {activeActionMenu === 'reset' && (
+                  <motion.div
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <span className="text-xs font-bold text-stone-700 uppercase tracking-widest px-3 whitespace-nowrap">
+                      {t('resetZoom')}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className={`flex flex-col items-start gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
@@ -678,17 +775,17 @@ const TaiwanMap: React.FC = () => {
             <div className="md:hidden flex flex-col items-start gap-2">
               {/* Capture Button */}
               <div
-                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeMobileMenu === 'export' ? 'bg-stone-50 border-stone-300' : ''}`}
+                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeActionMenu === 'export' ? 'bg-stone-50 border-stone-300' : ''}`}
               >
                 <button
-                  onClick={() => setActiveMobileMenu(activeMobileMenu === 'export' ? null : 'export')}
-                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeMobileMenu === 'export' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
+                  onClick={() => setActiveActionMenu(activeActionMenu === 'export' ? null : 'export')}
+                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeActionMenu === 'export' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
                 >
-                  <ImageDown className={`w-5 h-5 text-stone-600 transition-transform ${activeMobileMenu === 'export' ? 'scale-110' : ''}`} />
+                  <ImageDown className={`w-5 h-5 text-stone-600 transition-transform ${activeActionMenu === 'export' ? 'scale-110' : ''}`} />
                 </button>
 
                 <AnimatePresence>
-                  {activeMobileMenu === 'export' && (
+                  {activeActionMenu === 'export' && (
                     <motion.div
                       key="export-content"
                       initial={{ width: 0, opacity: 0 }}
@@ -703,7 +800,7 @@ const TaiwanMap: React.FC = () => {
                         <button
                           onClick={() => {
                             handleExport();
-                            setActiveMobileMenu(null);
+                            setActiveActionMenu(null);
                           }}
                           className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
                         >
@@ -713,7 +810,7 @@ const TaiwanMap: React.FC = () => {
                         <button
                           onClick={() => {
                             handleExport({ hideLegend: true });
-                            setActiveMobileMenu(null);
+                            setActiveActionMenu(null);
                           }}
                           className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
                         >
@@ -728,17 +825,17 @@ const TaiwanMap: React.FC = () => {
 
               {/* Share Button */}
               <div
-                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeMobileMenu === 'share' ? 'bg-stone-50 border-stone-300' : ''}`}
+                className={`flex items-center h-11 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300 ${activeActionMenu === 'share' ? 'bg-stone-50 border-stone-300' : ''}`}
               >
                 <button
-                  onClick={() => setActiveMobileMenu(activeMobileMenu === 'share' ? null : 'share')}
-                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeMobileMenu === 'share' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
+                  onClick={() => setActiveActionMenu(activeActionMenu === 'share' ? null : 'share')}
+                  className={`h-full w-11 flex items-center justify-center transition-colors ${activeActionMenu === 'share' ? 'bg-stone-200' : 'hover:bg-stone-50'}`}
                 >
-                  <Share2 className={`w-5 h-5 text-stone-600 transition-transform ${activeMobileMenu === 'share' ? 'scale-110' : ''}`} />
+                  <Share2 className={`w-5 h-5 text-stone-600 transition-transform ${activeActionMenu === 'share' ? 'scale-110' : ''}`} />
                 </button>
 
                 <AnimatePresence>
-                  {activeMobileMenu === 'share' && (
+                  {activeActionMenu === 'share' && (
                     <motion.div
                       key="share-content"
                       initial={{ width: 0, opacity: 0 }}
@@ -753,7 +850,7 @@ const TaiwanMap: React.FC = () => {
                         <button
                           onClick={() => {
                             handleShare();
-                            setActiveMobileMenu(null);
+                            setActiveActionMenu(null);
                           }}
                           className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
                         >
@@ -764,7 +861,7 @@ const TaiwanMap: React.FC = () => {
                           <button
                             onClick={() => {
                               handleExport({ share: true });
-                              setActiveMobileMenu(null);
+                              setActiveActionMenu(null);
                             }}
                             className="flex flex-col items-center px-1.5 py-1 hover:bg-stone-200/50 rounded-xl transition-colors"
                           >
@@ -784,7 +881,7 @@ const TaiwanMap: React.FC = () => {
               >
                 <button
                   onClick={() => {
-                    setActiveMobileMenu(null);
+                    setActiveActionMenu(null);
                     canvasRef.current?.resetZoom();
                     trackEvent('reset_map_zoom');
                   }}
