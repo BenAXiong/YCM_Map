@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { trackEvent } from '../hooks/useAnalytics';
 import { Settings, Globe, ChevronDown } from 'lucide-react';
@@ -46,6 +47,37 @@ type Props = {
     setLanguage: (v: 'zh' | 'en') => void;
     mapBgColor: string;
     setMapBgColor: (v: string) => void;
+};
+
+const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
+    const [isCollapsed, setIsCollapsed] = useState(!defaultOpen);
+
+    return (
+        <div className="border-b border-stone-100 last:border-none">
+            <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="w-full py-2 flex items-center justify-between text-stone-600 hover:text-stone-900 transition-colors group"
+            >
+                <h3 className="text-[14px] font-black uppercase tracking-widest text-stone-400 group-hover:text-stone-600 transition-colors">
+                    {title}
+                </h3>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? '-rotate-90 text-stone-300' : 'text-stone-500'}`} />
+            </button>
+            <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                    >
+                        {children}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
 };
 
 const MapSettingsMenu: React.FC<Props> = ({
@@ -101,15 +133,12 @@ const MapSettingsMenu: React.FC<Props> = ({
                         initial={{ opacity: 0, x: -10, scale: 0.95 }}
                         animate={{ opacity: 1, x: 0, scale: 1 }}
                         exit={{ opacity: 0, x: -10, scale: 0.95 }}
-                        className="absolute top-0 left-full ml-3 w-48 bg-white rounded-2xl shadow-xl border border-stone-200 p-4 z-40"
+                        className="absolute top-0 left-full ml-3 w-52 bg-white rounded-2xl shadow-xl border border-stone-200 p-3 z-40 max-h-[85vh] overflow-y-auto overflow-x-hidden custom-scrollbar"
                     >
-                        <div className="space-y-6">
+                        <div className="space-y-2">
                             {/* SECTION: Map Layers */}
-                            <div>
-                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    {t('boundaryDisplay')}
-                                </h3>
-                                <div className="space-y-3">
+                            <CollapsibleSection title={t('boundaryDisplay')} defaultOpen={true}>
+                                <div className="space-y-3 pb-2 pt-1">
                                     <ToggleRow
                                         label={t('countyBorders')}
                                         value={showCountyBorders}
@@ -147,14 +176,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* SECTION: Pins */}
-                            <div className="pt-2 border-t border-stone-100">
-                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    {t('pinsSection')}
-                                </h3>
-                                <div className="space-y-3">
+                            <CollapsibleSection title={t('pinsSection')}>
+                                <div className="space-y-3 pb-2 pt-1">
                                     <ToggleRow
                                         label={t('showPins')}
                                         value={showPins}
@@ -171,14 +197,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         onToggle={() => setShowPinGlow(!showPinGlow)}
                                     />
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* SECTION: Area Names */}
-                            <div className="pt-2 border-t border-stone-100">
-                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    {t('areaNames')}
-                                </h3>
-                                <div className="space-y-3">
+                            <CollapsibleSection title={t('areaNames')}>
+                                <div className="space-y-3 pb-2 pt-1">
                                     <ToggleRow
                                         label={t('level1Names')}
                                         value={showLvl1Names}
@@ -195,14 +218,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         onToggle={() => setShowLvl3Names(!showLvl3Names)}
                                     />
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* SECTION: UI Options */}
-                            <div className="pt-2 border-t border-stone-100">
-                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    {t('boundaryDisplay')}
-                                </h3>
-                                <div className="space-y-3">
+                            <CollapsibleSection title={t('uiOptions')}>
+                                <div className="space-y-3 pb-2 pt-1">
                                     <ToggleRow
                                         label={t('showFixedInfo')}
                                         value={showFixedInfo}
@@ -218,7 +238,7 @@ const MapSettingsMenu: React.FC<Props> = ({
                                     <div className="flex flex-col gap-2 pt-1">
                                         <div className="flex items-center gap-2 text-stone-500">
                                             <Globe className="w-3.5 h-3.5" />
-                                            <span className="text-xs font-bold">語言 / Language</span>
+                                            <span className="text-xs font-bold uppercase tracking-tight">語言 / Language</span>
                                         </div>
                                         <div className="relative group/select">
                                             <select
@@ -237,10 +257,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="mt-8 pt-2 border-t border-stone-100 flex justify-between items-center opacity-30 select-none">
-                                    <span className="text-[9px] font-black tracking-tighter text-stone-400">BUILD VER</span>
-                                    <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1333</span>
-                                </div>
+                            </CollapsibleSection>
+
+                            <div className="mt-4 pt-2 border-t border-stone-100 flex justify-between items-center opacity-30 select-none px-1">
+                                <span className="text-[9px] font-black tracking-tighter text-stone-400">BUILD VER</span>
+                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1333</span>
                             </div>
                         </div>
                     </motion.div>

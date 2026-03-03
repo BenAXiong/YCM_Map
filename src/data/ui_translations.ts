@@ -43,6 +43,7 @@ export const uiTranslations = {
         showPinContours: '踩點分類邊框',
         showPinGlow: '踩點區域光暈',
         languageSelect: '語言 / Language',
+        uiOptions: '介面設定',
 
         // Filter Panel
         filterLanguages: '族語篩選',
@@ -101,6 +102,7 @@ export const uiTranslations = {
         showPinContours: 'Pin-themed borders',
         showPinGlow: 'Pin area glow',
         languageSelect: 'Language / 語言',
+        uiOptions: 'UI Options',
 
         // Filter Panel
         filterLanguages: 'Language Filter',
