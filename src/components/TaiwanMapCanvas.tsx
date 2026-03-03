@@ -187,24 +187,42 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
         const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
 
-        // 1. Update fills when selection or mode changes
+        // 1. Update fills & strokes when selection or mode changes
         useEffect(() => {
-            const { getDialects, getVillageDialects, getCountyTownVillageFromProps, selectedDialects, showSharedDialects } = stateRef.current;
+            const {
+                getDialects,
+                getVillageDialects,
+                getCountyTownVillageFromProps,
+                selectedDialects,
+                showSharedDialects,
+                pinnedLocations,
+                showPinContours,
+                showPinGlow
+            } = stateRef.current;
 
+            // Update Townships
             if (gTownshipsRef.current) {
+                const scColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
+                const swWidth = showTownshipContours ? 0.5 : 0.2; // Thin white stroke to seal gaps
+
                 d3.select(gTownshipsRef.current)
                     .selectAll<SVGPathElement, any>('.township')
+                    .attr('stroke', scColor)
+                    .attr('stroke-width', swWidth)
                     .attr('fill', (d: any) => {
                         if (showVillageColors) return 'transparent';
                         const p = d.properties || {};
                         const { county, town } = getCountyTownVillageFromProps(p);
                         const dialectsArray = getDialects(county, town);
                         return generateAreaFill(dialectsArray, selectedDialects, showSharedDialects, gDefsRef);
-                    });
+                    })
+                    .attr('pointer-events', showVillageColors ? 'none' : 'auto');
             }
 
+            // Update Village Polygons
             if (gVillagePolygonsRef.current) {
                 d3.select(gVillagePolygonsRef.current)
+                    .attr('display', showVillageColors ? 'block' : 'none')
                     .selectAll<SVGPathElement, any>('.village-poly')
                     .attr('fill', (d: any) => {
                         const p = d.properties || {};
@@ -216,55 +234,49 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     })
                     .attr('stroke', (d: any) => {
                         if (!showPinContours) return 'none';
-                        const p = d.properties || {};
-                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
                         const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
                         return pin ? PIN_COLORS[pin] : 'none';
                     })
                     .attr('stroke-width', (d: any) => {
                         if (!showPinContours) return 0;
-                        const p = d.properties || {};
-                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
                         return pinnedLocations[`${county}|${town}|${village || ''}`] ? 1.5 : 0;
                     })
                     .attr('filter', (d: any) => {
                         if (!showPinGlow) return 'none';
-                        const p = d.properties || {};
-                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
                         const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
                         if (!pin) return 'none';
                         const filterId = `glow-${pin}`;
-                        // Lazily append the filter definition if not already present
                         if (gDefsRef.current && !document.getElementById(filterId)) {
                             const color = PIN_COLORS[pin];
-                            const filt = d3.select(gDefsRef.current)
-                                .append('filter')
-                                .attr('id', filterId)
-                                .attr('x', '-50%').attr('y', '-150%')
-                                .attr('width', '200%').attr('height', '300%');
-                            filt.append('feFlood')
-                                .attr('result', 'color')
-                                .attr('flood-color', color)
-                                .attr('flood-opacity', 0.7);
-                            filt.append('feComposite')
-                                .attr('in', 'color')
-                                .attr('in2', 'SourceAlpha')
-                                .attr('operator', 'in')
-                                .attr('result', 'coloredShape');
-                            filt.append('feGaussianBlur')
-                                .attr('in', 'coloredShape')
-                                .attr('stdDeviation', 4)
-                                .attr('result', 'blur');
-                            // Drop shadow offset upward (dy negative)
+                            const filt = d3.select(gDefsRef.current).append('filter').attr('id', filterId).attr('x', '-50%').attr('y', '-100%').attr('width', '200%').attr('height', '200%');
+                            filt.append('feFlood').attr('flood-color', color).attr('flood-opacity', 0.8).attr('result', 'flood');
+                            filt.append('feComposite').attr('in', 'flood').attr('in2', 'SourceAlpha').attr('operator', 'in').attr('result', 'mask');
+                            filt.append('feGaussianBlur').attr('in', 'mask').attr('stdDeviation', 2).attr('result', 'blur');
+                            filt.append('feOffset').attr('in', 'blur').attr('dy', -3).attr('result', 'offsetBlur');
                             const merge = filt.append('feMerge');
-                            merge.append('feMergeNode').attr('in', 'blur');
-                            merge.append('feMergeNode').attr('in', 'blur');
+                            merge.append('feMergeNode').attr('in', 'offsetBlur');
                             merge.append('feMergeNode').attr('in', 'SourceGraphic');
                         }
                         return `url(#${filterId})`;
-                    });
+                    })
+                    .attr('pointer-events', showVillageColors ? 'auto' : 'none');
             }
-        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps, pinnedLocations, showPinContours, showPinGlow, mapVersion]);
+        }, [
+            selectedDialects,
+            showSharedDialects,
+            showVillageColors,
+            getDialects,
+            getVillageDialects,
+            getCountyTownVillageFromProps,
+            pinnedLocations,
+            showPinContours,
+            showPinGlow,
+            showTownshipContours,
+            mapVersion
+        ]);
 
         // 2. Toggle Layers Visibility
         useEffect(() => {
@@ -273,41 +285,12 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .selectAll('.county-border')
                     .attr('display', showCountyBorders ? 'block' : 'none');
             }
-        }, [showCountyBorders]);
-
-        useEffect(() => {
-            if (gTownshipsRef.current) {
-                const strokeColor = showTownshipContours ? '#cbd5e1' : '#ffffff';
-                const strokeWidth = showTownshipContours ? 0.5 : 0.3;
-                d3.select(gTownshipsRef.current)
-                    .selectAll<SVGPathElement, any>('.township')
-                    .each(function () {
-                        const sel = d3.select(this);
-                        if (sel.attr('stroke') !== '#000000') {
-                            sel.attr('stroke', strokeColor).attr('stroke-width', strokeWidth);
-                        }
-                    });
-            }
-        }, [showTownshipContours]);
-
-        useEffect(() => {
             if (gVillagesRef.current) {
                 d3.select(gVillagesRef.current)
                     .selectAll('.village-border')
                     .attr('display', showVillageBorders ? 'block' : 'none');
             }
-            if (gVillagePolygonsRef.current) {
-                d3.select(gVillagePolygonsRef.current)
-                    .attr('display', showVillageColors ? 'block' : 'none')
-                    .selectAll('.village-poly')
-                    .attr('pointer-events', showVillageColors ? 'auto' : 'none');
-            }
-            if (gTownshipsRef.current) {
-                d3.select(gTownshipsRef.current)
-                    .selectAll('.township')
-                    .attr('pointer-events', showVillageColors ? 'none' : 'auto');
-            }
-        }, [showVillageBorders, showVillageColors]);
+        }, [showCountyBorders, showVillageBorders]);
 
         // 3. Labels Update
         useEffect(() => {

@@ -9,7 +9,18 @@ function ReloadPrompt() {
         updateServiceWorker,
     } = useRegisterSW({
         onRegistered(r) {
-            console.log('SW Registered: ' + r);
+            console.log('SW Registered');
+            if (r) {
+                // Check for updates every hour
+                setInterval(() => {
+                    r.update();
+                }, 60 * 60 * 1000);
+
+                // Also check when the app/tab gains focus
+                window.addEventListener('focus', () => {
+                    r.update();
+                });
+            }
         },
         onRegisterError(error) {
             console.log('SW registration error', error);

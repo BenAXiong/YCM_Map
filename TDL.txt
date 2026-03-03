@@ -18,6 +18,7 @@ remove double click to zoom
 adapting lvl2 names font size
 theme customization (esp font size & bg colors)
 add village.notes.json next to tooltip name small grey
+(bg sea bleeding color on areas contours?)
 
 EXTRA
 ! stories from the people (see https://pnts.nmth.gov.tw/create/show/11) -- ask Sangpuy and others to share
