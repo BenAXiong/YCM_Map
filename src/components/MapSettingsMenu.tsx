@@ -44,6 +44,8 @@ type Props = {
 
     language: 'zh' | 'en';
     setLanguage: (v: 'zh' | 'en') => void;
+    mapBgColor: string;
+    setMapBgColor: (v: string) => void;
 };
 
 const MapSettingsMenu: React.FC<Props> = ({
@@ -77,6 +79,8 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowDialectUsageNames,
     language,
     setLanguage,
+    mapBgColor,
+    setMapBgColor,
 }) => {
     const { t } = useTranslation(language);
 
@@ -132,6 +136,13 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         value={showSharedDialects}
                                         onToggle={() => setShowSharedDialects(!showSharedDialects)}
                                     />
+                                    <div className="pt-1">
+                                        <ColorRow
+                                            label={t('mapBgColor')}
+                                            value={mapBgColor}
+                                            onChange={setMapBgColor}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -245,6 +256,28 @@ const ToggleRow: React.FC<{ label: string; sublabel?: string; value: boolean; on
         >
             <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${value ? 'left-5' : 'left-1'}`} />
         </button>
+    </div>
+);
+
+const ColorRow: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({
+    label,
+    value,
+    onChange,
+}) => (
+    <div className="flex items-center justify-between">
+        <span className="text-sm text-stone-700 font-bold">{label}</span>
+        <div className="relative flex items-center h-5 w-9">
+            <input
+                type="color"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div
+                className="w-9 h-5 rounded-md border border-stone-200 shadow-sm transition-all"
+                style={{ backgroundColor: value }}
+            />
+        </div>
     </div>
 );
 

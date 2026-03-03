@@ -49,6 +49,7 @@ const TaiwanMap: React.FC = () => {
     SHOW_PIN_CONTOURS: 'ycm_show_pin_contours',
     SHOW_PIN_GLOW: 'ycm_show_pin_glow',
     SHOW_DIALECT_USAGE_NAMES: 'ycm_show_dialect_usage_names',
+    MAP_BG_COLOR: 'ycm_map_bg_color',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
@@ -99,6 +100,10 @@ const TaiwanMap: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS);
     return saved !== null ? JSON.parse(saved) : false;
   });
+  const [mapBgColor, setMapBgColor] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.MAP_BG_COLOR) || '#f8fafc';
+  });
+
   const [language, setLanguage] = useState<'zh' | 'en'>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE);
     return (saved as 'zh' | 'en') || 'zh';
@@ -164,6 +169,10 @@ const TaiwanMap: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS, JSON.stringify(showVillageColors));
   }, [showVillageColors]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MAP_BG_COLOR, mapBgColor);
+  }, [mapBgColor]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
@@ -310,7 +319,7 @@ const TaiwanMap: React.FC = () => {
     setTimeout(async () => {
       try {
         const dataUrl = await toPng(mapContainerRef.current!, {
-          backgroundColor: '#e7e5e4', // stone-200
+          backgroundColor: mapBgColor, // Use mapBgColor for export background
           quality: 0.95,
           pixelRatio: 2,
           filter: (node) => {
@@ -629,6 +638,8 @@ const TaiwanMap: React.FC = () => {
               setShowDialectUsageNames={setShowDialectUsageNames}
               language={language}
               setLanguage={setLanguage}
+              mapBgColor={mapBgColor}
+              setMapBgColor={setMapBgColor}
             />
             <button
               onClick={() => canvasRef.current?.resetZoom()}
@@ -781,6 +792,7 @@ const TaiwanMap: React.FC = () => {
         countyBorders={countyBorders}
         villageBorders={villageBorders}
         villageFeatures={villageFeatures}
+        mapBgColor={mapBgColor}
         showCountyBorders={showCountyBorders}
         showTownshipContours={showTownshipContours}
         showVillageBorders={showVillageBorders}

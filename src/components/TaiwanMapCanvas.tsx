@@ -40,6 +40,7 @@ type Props = {
     showLvl2Names: boolean;
     showLvl3Names: boolean;
     language: 'zh' | 'en';
+    mapBgColor: string;
 };
 import { useTranslation } from '../hooks/useTranslation';
 import type { PinnedMap } from './types';
@@ -121,6 +122,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showLvl2Names,
             showLvl3Names,
             language,
+            mapBgColor,
         },
         ref
     ) => {
@@ -621,7 +623,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
         }, [townFeatures, villageFeatures, countyBorders, villageBorders]);
 
-        return <svg ref={svgRef} className="w-full h-full bg-slate-50" />;
+        return <svg ref={svgRef} className="w-full h-full" style={{ backgroundColor: mapBgColor }} />;
     }
 );
 
