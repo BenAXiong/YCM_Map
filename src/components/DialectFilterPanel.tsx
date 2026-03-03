@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft, Footprints } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft, Footprints, ListFilter } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import type { UserStats } from '../hooks/useUserStats';
 
@@ -360,15 +360,20 @@ const DialectFilterPanel: React.FC<Props> = ({
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className={`fixed z-40 shadow-2xl hover:bg-opacity-100 transition-all flex items-center justify-center gap-3 font-black tracking-widest uppercase text-xs active:scale-95 ${isMobile
-                        ? 'bottom-8 right-6 rounded-2xl px-5 h-12 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
-                        : 'top-6 right-6 rounded-2xl p-4 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
+                    className={`fixed z-40 shadow-2xl hover:bg-opacity-100 transition-all flex items-center font-black tracking-widest uppercase text-[12px] active:scale-95 transition-all duration-300 ${isMobile
+                        ? 'bottom-8 right-6 rounded-2xl w-[144px] h-12 px-4 justify-between bg-white/95 backdrop-blur-xl text-stone-900 border border-stone-200'
+                        : 'top-6 right-6 rounded-2xl p-4 justify-center gap-2 bg-white/90 backdrop-blur-md text-stone-900 border border-stone-200'
                         }`}
                 >
                     {isMobile ? (
                         <>
-                            <ChevronUp className="w-4 h-4 text-emerald-600" />
-                            {t('filterLanguages')}
+                            <div className="w-[22px] flex justify-center shrink-0">
+                                <ChevronUp className="w-3.5 h-3.5 text-emerald-600" />
+                            </div>
+                            <span className="truncate flex-1 text-center">{t('filterLanguages')}</span>
+                            <div className="p-1 bg-emerald-50 rounded-lg shrink-0">
+                                <ListFilter className="w-3.5 h-3.5 text-emerald-600" />
+                            </div>
                         </>
                     ) : (
                         <>
