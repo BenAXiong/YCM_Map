@@ -9,6 +9,7 @@ type Props = {
     languageGroups: Record<string, string[]>;
     getDialectColor: (dialect: string) => string;
     language: 'zh' | 'en';
+    showUsageNames: boolean;
 };
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -19,8 +20,9 @@ const MapLegend: React.FC<Props> = ({
     languageGroups,
     getDialectColor,
     language,
+    showUsageNames,
 }) => {
-    const { t, mt } = useTranslation(language);
+    const { t, mt } = useTranslation(language, showUsageNames);
     const [isExpanded, setIsExpanded] = useState(!isMobile);
 
     useEffect(() => {

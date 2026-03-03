@@ -1,3 +1,26 @@
+/**
+ * Common usage/tribal names for dialects.
+ * Gate these behind a toggle to allow users to switch between 
+ * official/academic names and names commonly used within the tribes.
+ */
+export const dialectUsageNames: Record<string, string> = {
+    // Amis (阿美語)
+    '北部阿美語': '南勢阿美語',    // Traditional regional name: 南勢
+    '中部阿美語': '秀姑巒阿美語',  // Traditional regional name: 秀姑巒
+
+    // Seediq (賽德克語)
+    // Note: Standard bundle keys are short, adding language suffix for usage mode
+    '都達語': '都達賽德克語',
+    '德固達雅語': '德固達雅賽德克語',
+    '德魯固語': '德鹿谷賽德克語',   // Also referred to as 德魯固/德鹿谷
+
+    // Puyuma (卑南語)
+    '初鹿卑南語': '西群卑南語',    // Traditional grouping: 西群
+
+    // Rukai (魯凱語)
+    '霧臺魯凱語': '霧台魯凱語'     // Simplification of 臺 to 台 as commonly written
+};
+
 export const mapTranslations: Record<string, Record<string, string>> = {
     zh: {
         // Languages
@@ -106,46 +129,46 @@ export const mapTranslations: Record<string, Record<string, string>> = {
         '魯凱語': 'Rukai',
         '鄒語': 'Tsou',
         '卡那卡那富語': 'Kanakanavu',
-        '拉阿魯哇語': 'Hla\'alua',
+        '拉阿魯哇語': 'Hla’alua',
         '賽夏語': 'Saisiyat',
-        '雅美語': 'Yami / Tao',
+        '雅美語': 'Yami (Tao)',
         '邵語': 'Thao',
         '噶瑪蘭語': 'Kavalan',
-        '太魯閣語': 'Truku',
+        '太魯閣語': 'Truku (Taroko)',
         '撒奇萊雅語': 'Sakizaya',
         '賽德克語': 'Seediq',
 
         // Dialects
         '北部阿美語': 'Northern Amis',
-        '中部阿美語': 'Central Amis',
+        '中部阿美語': 'Xiuguluan Amis',
         '海岸阿美語': 'Coastal Amis',
-        '馬蘭阿美語': 'Maran Amis',
+        '馬蘭阿美語': 'Malan Amis',
         '恆春阿美語': 'Hengchun Amis',
         '賽考利克泰雅語': 'Squliq Atayal',
-        '澤敖利泰雅語': 'Skikun Atayal',
-        '汶水泰雅語': 'Wenshui Atayal',
-        '萬大泰雅語': 'Plngawan Atayal',
-        '四季泰雅語': 'Skikun Atayal',
-        '宜蘭澤敖利泰雅語': 'Yilan Tsole Atayal',
+        '澤敖利泰雅語': 'C’uli’ Atayal',
+        '汶水泰雅語': 'Mayrinax / Wenshui Atayal',
+        '萬大泰雅語': 'Plngawan / Wanda Atayal',
+        '四季泰雅語': 'Skikun / Sijiq Atayal',
+        '宜蘭澤敖利泰雅語': 'Klesan / Yilan C’uli’ Atayal',
         '東排灣語': 'Eastern Paiwan',
         '北排灣語': 'Northern Paiwan',
         '中排灣語': 'Central Paiwan',
         '南排灣語': 'Southern Paiwan',
-        '卓群布農語': 'Take-todo Bunun',
-        '卡群布農語': 'Take-bakha Bunun',
-        '丹群布農語': 'Take-vatan Bunun',
-        '巒群布農語': 'Take-banuad Bunun',
+        '卓群布農語': 'Takituduh Bunun',
+        '卡群布農語': 'Takibakha Bunun',
+        '丹群布農語': 'Takivatan Bunun',
+        '巒群布農語': 'Takbanuaz Bunun',
         '郡群布農語': 'Isbukun Bunun',
         '南王卑南語': 'Nanwang Puyuma',
-        '知本卑南語': 'Katratripul Puyuma',
-        '初鹿卑南語': 'Ulivelivek Puyuma',
-        '建和卑南語': 'Kasavakan Puyuma',
-        '東魯凱語': 'Taromak Rukai',
-        '霧臺魯凱語': 'Ngudradrekay Rukai',
-        '大武魯凱語': 'Labuan Rukai',
-        '多納魯凱語': 'Thao Rukai',
-        '茂林魯凱語': 'Teldreka Rukai',
-        '萬山魯凱語': 'Oponoho Rukai',
+        '知本卑南語': 'Zhiben Puyuma',
+        '初鹿卑南語': 'Western Puyuma',
+        '建和卑南語': 'Jianhe Puyuma',
+        '東魯凱語': 'Eastern Rukai',
+        '霧臺魯凱語': 'Wutai Rukai',
+        '大武魯凱語': 'Tawu Rukai',
+        '多納魯凱語': 'Dona Rukai',
+        '茂林魯凱語': 'Maolin Rukai',
+        '萬山魯凱語': 'Wanshan Rukai',
         '都達語': 'Toda Seediq',
         '德固達雅語': 'Tgdaya Seediq',
         '德魯固語': 'Truku Seediq',

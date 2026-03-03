@@ -48,6 +48,7 @@ const TaiwanMap: React.FC = () => {
     SHOW_PINS: 'ycm_show_pins',
     SHOW_PIN_CONTOURS: 'ycm_show_pin_contours',
     SHOW_PIN_GLOW: 'ycm_show_pin_glow',
+    SHOW_DIALECT_USAGE_NAMES: 'ycm_show_dialect_usage_names',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
@@ -123,11 +124,16 @@ const TaiwanMap: React.FC = () => {
     return saved !== null ? JSON.parse(saved) : false;
   });
 
+  const [showDialectUsageNames, setShowDialectUsageNames] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_DIALECT_USAGE_NAMES);
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
   // --- Detail state ---
   const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
   const [isDetailPinned, setIsDetailPinned] = useState(false);  // tooltip pinned by click
   const [showDetailPanel, setShowDetailPanel] = useState(false); // FixedInfoPanel open via More Info btn
-  const { t } = useTranslation(language);
+  const { t } = useTranslation(language, showDialectUsageNames);
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -148,6 +154,10 @@ const TaiwanMap: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_BORDERS, JSON.stringify(showVillageBorders));
   }, [showVillageBorders]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_DIALECT_USAGE_NAMES, JSON.stringify(showDialectUsageNames));
+  }, [showDialectUsageNames]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS, JSON.stringify(showVillageColors));
@@ -594,6 +604,8 @@ const TaiwanMap: React.FC = () => {
               setShowPinContours={setShowPinContours}
               showPinGlow={showPinGlow}
               setShowPinGlow={setShowPinGlow}
+              showDialectUsageNames={showDialectUsageNames}
+              setShowDialectUsageNames={setShowDialectUsageNames}
               language={language}
               setLanguage={setLanguage}
             />
@@ -698,6 +710,7 @@ const TaiwanMap: React.FC = () => {
         onSelectAll={selectAll}
         onClearAll={clearAll}
         getDialectColor={getDialectColor}
+        showUsageNames={showDialectUsageNames}
       />
 
       <CursorTooltip
@@ -721,6 +734,7 @@ const TaiwanMap: React.FC = () => {
           handleLeave();
         }}
         language={language}
+        showUsageNames={showDialectUsageNames}
       />
 
       {!isMobile && (
@@ -754,6 +768,7 @@ const TaiwanMap: React.FC = () => {
             setSelectedDetailDialect(null);
           }}
           language={language}
+          showUsageNames={showDialectUsageNames}
         />
       </div>
 
@@ -765,6 +780,7 @@ const TaiwanMap: React.FC = () => {
           languageGroups={languageGroups}
           getDialectColor={getDialectColor}
           language={language}
+          showUsageNames={showDialectUsageNames}
         />
       </div>
     </div>

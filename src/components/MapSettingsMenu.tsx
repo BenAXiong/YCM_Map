@@ -39,6 +39,9 @@ type Props = {
     showPinGlow: boolean;
     setShowPinGlow: (v: boolean) => void;
 
+    showDialectUsageNames: boolean;
+    setShowDialectUsageNames: (v: boolean) => void;
+
     language: 'zh' | 'en';
     setLanguage: (v: 'zh' | 'en') => void;
 };
@@ -70,6 +73,8 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowPinContours,
     showPinGlow,
     setShowPinGlow,
+    showDialectUsageNames,
+    setShowDialectUsageNames,
     language,
     setLanguage,
 }) => {
@@ -188,6 +193,12 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         label={t('showFixedInfo')}
                                         value={showFixedInfo}
                                         onToggle={() => setShowFixedInfo(!showFixedInfo)}
+                                    />
+
+                                    <ToggleRow
+                                        label={t('dialectUsageToggle')}
+                                        value={showDialectUsageNames}
+                                        onToggle={() => setShowDialectUsageNames(!showDialectUsageNames)}
                                     />
 
                                     <div className="flex flex-col gap-2 pt-1">

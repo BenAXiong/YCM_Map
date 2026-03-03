@@ -19,6 +19,7 @@ type Props = {
     onSelectDialect: (d: string) => void;
     onClose?: () => void;
     language: 'zh' | 'en';
+    showUsageNames: boolean;
 };
 import { useTranslation } from '../hooks/useTranslation';
 import { MapPin, Heart, Footprints, Trash2 } from 'lucide-react';
@@ -42,8 +43,9 @@ const FixedInfoPanel: React.FC<Props> = ({
     onSelectDialect,
     onClose,
     language,
+    showUsageNames,
 }) => {
-    const { t, mt } = useTranslation(language);
+    const { t, mt } = useTranslation(language, showUsageNames);
     const [showPinSelector, setShowPinSelector] = React.useState(false);
 
     const pinKey = `${hoveredLabel.county}|${hoveredLabel.town}|${hoveredLabel.village || ''}`;

@@ -1,17 +1,13 @@
 CORE
-reorder dialects
-correct english translation of dialects
-
 basic analytics: users, ?
-complete areas names en, seems limited to non-grey areas (and lvl3...)
 title?
 ?optimize loading
+tabs at bottom (phrases, culture, exploration, notes)
 
 FEATURES
 per area user notes
 
 UI
-consider tabs at bottom (phrases, culture, exploration, notes)
 add settings icons
 make legend draggable, esp on mobile
 enable single area coloring vs shared dialects vs shared language
@@ -28,6 +24,7 @@ EXTRA
 ! stories from the people (see https://pnts.nmth.gov.tw/create/show/11) -- ask Sangpuy and others to share
 	add images, audio, SL text and translations
 population data of each division (yes, even li/cun if possible)
+complete areas names en, seems limited to non-grey areas (and lvl3...)
 
 OAUTH
     my map + sharable gallery of pics vs locations and pins 

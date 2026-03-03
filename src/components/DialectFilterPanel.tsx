@@ -31,6 +31,7 @@ type Props = {
     // coloring for dialect chips
     getDialectColor: (dialect: string) => string;
     language: 'zh' | 'en';
+    showUsageNames: boolean;
 };
 
 const DialectFilterPanel: React.FC<Props> = ({
@@ -53,12 +54,15 @@ const DialectFilterPanel: React.FC<Props> = ({
     onSelectTownship,
     getDialectColor,
     language,
+    showUsageNames,
 }) => {
-    const { t, mt } = useTranslation(language);
+    const { t, mt } = useTranslation(language, showUsageNames);
 
-    const InfoTooltip: React.FC<{ lang: string; stats: any; population: number; language: string }> = ({ lang, stats, population, language }) => {
+    const InfoTooltip: React.FC<{ lang: string; stats: any; population: number; language: string; showUsageNames: boolean }> = ({ lang, stats, population, language, showUsageNames }) => {
         const [isHovered, setIsHovered] = useState(false);
         const iconRef = useRef<HTMLDivElement>(null);
+
+        const { mt: mtLocal } = useTranslation(language as any, showUsageNames);
 
         const getPortalPosition = () => {
             if (!iconRef.current) return { top: 0, left: 0 };
@@ -88,6 +92,9 @@ const DialectFilterPanel: React.FC<Props> = ({
                             <div className="flex justify-between gap-4 font-bold">
                                 <span className="opacity-60">{language === 'zh' ? '人口' : 'Population'}</span>
                                 <span>{population?.toLocaleString() || '---'} 人</span>
+                            </div>
+                            <div className="text-[10px] text-emerald-400 font-bold border-b border-white/5 mb-1 pb-1">
+                                {mtLocal(lang)}
                             </div>
                             {stats?.total > 0 && (
                                 <div className="flex justify-between gap-4 font-bold border-t border-white/10 pt-1 mt-0.5 text-emerald-400">
@@ -281,6 +288,7 @@ const DialectFilterPanel: React.FC<Props> = ({
                                                     stats={userStats.byLanguage[lang]}
                                                     population={populationMap[lang]}
                                                     language={language}
+                                                    showUsageNames={showUsageNames}
                                                 />
                                                 {isAnySelected && (
                                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
