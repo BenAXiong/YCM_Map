@@ -56,12 +56,12 @@ const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode; d
         <div className="border-b border-stone-100 last:border-none">
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="w-full py-2 flex items-center justify-between text-stone-600 hover:text-stone-900 transition-colors group"
+                className="w-full py-2.5 flex items-center justify-between text-stone-900 hover:text-black transition-colors group"
             >
-                <h3 className="text-[14px] font-black uppercase tracking-widest text-stone-400 group-hover:text-stone-600 transition-colors">
+                <h3 className="text-[15px] md:text-[16px] font-black uppercase tracking-widest transition-colors mb-0 flex items-center gap-2">
                     {title}
                 </h3>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? '-rotate-90 text-stone-300' : 'text-stone-500'}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? '-rotate-90 text-stone-300' : 'text-stone-600'}`} />
             </button>
             <AnimatePresence initial={false}>
                 {!isCollapsed && (
@@ -70,7 +70,7 @@ const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode; d
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
-                        className="overflow-hidden"
+                        className="overflow-hidden pl-3"
                     >
                         {children}
                     </motion.div>
@@ -261,7 +261,7 @@ const MapSettingsMenu: React.FC<Props> = ({
 
                             <div className="mt-4 pt-2 border-t border-stone-100 flex justify-between items-center opacity-30 select-none px-1">
                                 <span className="text-[9px] font-black tracking-tighter text-stone-400">BUILD VER</span>
-                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1333</span>
+                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.03.1349</span>
                             </div>
                         </div>
                     </motion.div>
