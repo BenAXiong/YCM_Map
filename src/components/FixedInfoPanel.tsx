@@ -62,7 +62,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                         <div className="flex flex-col">
                             {hoveredLabel.village && (
                                 <span className="block text-3xl font-black text-emerald-600 mb-1 tracking-tighter">
-                                    {hoveredLabel.village}
+                                    {mt(hoveredLabel.village)}
                                 </span>
                             )}
                             <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em]">
@@ -78,7 +78,7 @@ const FixedInfoPanel: React.FC<Props> = ({
                                         e.stopPropagation();
                                         setShowPinSelector(!showPinSelector);
                                     }}
-                                    className={`p-2 rounded-2xl transition-all ${currentPin ? 'bg-white shadow-lg' : 'hover:bg-stone-50 text-stone-300'}`}
+                                    className={`p-2 rounded-2xl transition-all ${currentPin ? 'bg-white shadow-lg' : 'hover:bg-stone-50 text-emerald-500'}`}
                                     style={{ color: currentPin ? PIN_CONFIG[currentPin].color : undefined }}
                                 >
                                     {currentPin ? React.createElement(PIN_CONFIG[currentPin].icon, { className: 'w-6 h-6 fill-current' }) : <MapPin className="w-6 h-6" />}

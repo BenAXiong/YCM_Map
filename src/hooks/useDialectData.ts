@@ -4,6 +4,7 @@ import villageLookupData from '../data/villages.lookup.json';
 import villageNotesData from '../data/villages.notes.json';
 
 import languageStats from '../data/language_stats.json';
+import { DIALECT_ORDER_HINTS } from '../data/dialectOrder';
 
 const villageLookup: Record<string, string[]> = (villageLookupData as any).lookup;
 const villageOverrides: Record<string, string[]> = (villageNotesData as any).village_dialects_overrides || {};
@@ -105,7 +106,26 @@ export function useDialectData() {
             return popB - popA;
         });
 
-        return Object.fromEntries(entries);
+        // Also sort the dialects within each group if a hint exists
+        const sortedGroups: Record<string, string[]> = {};
+        for (const [lang, dialects] of entries) {
+            const hints = DIALECT_ORDER_HINTS[lang];
+            if (hints) {
+                const sortedDialects = [...dialects].sort((da, db) => {
+                    const idxA = hints.indexOf(da);
+                    const idxB = hints.indexOf(db);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return da.localeCompare(db);
+                });
+                sortedGroups[lang] = sortedDialects;
+            } else {
+                sortedGroups[lang] = dialects;
+            }
+        }
+
+        return sortedGroups;
     }, [populationMap]);
 
     const allDialects = useMemo(() => {

@@ -81,7 +81,7 @@ const CursorTooltip: React.FC<Props> = ({
                     <div className="flex flex-col">
                         {hoveredLabel.village && (
                             <span className="block text-2xl font-black text-emerald-600 mb-0.5 tracking-tight">
-                                {hoveredLabel.village}
+                                {mt(hoveredLabel.village)}
                             </span>
                         )}
                         <h3 className="text-sm font-bold text-stone-500 uppercase tracking-wider">
@@ -100,7 +100,7 @@ const CursorTooltip: React.FC<Props> = ({
                                         setShowPinSelector(!showPinSelector);
                                     }}
                                     className={`p-1.5 rounded-full transition-all ${currentPin ? 'bg-white shadow-md' : 'hover:bg-stone-100'}`}
-                                    style={{ color: currentPin ? PIN_CONFIG[currentPin].color : '#d6d3d1' }}
+                                    style={{ color: currentPin ? PIN_CONFIG[currentPin].color : '#10b981' }}
                                 >
                                     {currentPin ? React.createElement(PIN_CONFIG[currentPin].icon, { className: 'w-5 h-5 fill-current' }) : <MapPin className="w-5 h-5" />}
                                 </button>

@@ -9,9 +9,10 @@ import { useDialectData } from '../hooks/useDialectData';
 
 import TaiwanMapCanvas, { type TaiwanMapCanvasHandle } from './TaiwanMapCanvas';
 import DialectFilterPanel from './DialectFilterPanel';
-import MapSettingsMenu from './MapSettingsMenu';
 import CursorTooltip from './CursorTooltip';
 import FixedInfoPanel from './FixedInfoPanel';
+import ExplorationProgressPanel from './ExplorationProgressPanel';
+import MapSettingsMenu from './MapSettingsMenu';
 import MapLegend from './MapLegend';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUserStats } from '../hooks/useUserStats';
@@ -46,6 +47,7 @@ const TaiwanMap: React.FC = () => {
     PINNED_LOCATIONS: 'ycm_pinned_locations',
     SHOW_PINS: 'ycm_show_pins',
     SHOW_PIN_CONTOURS: 'ycm_show_pin_contours',
+    SHOW_PIN_GLOW: 'ycm_show_pin_glow',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
@@ -116,9 +118,15 @@ const TaiwanMap: React.FC = () => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
+  const [showPinGlow, setShowPinGlow] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_PIN_GLOW);
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
   // --- Detail state ---
   const [selectedDetailDialect, setSelectedDetailDialect] = useState<string | null>(null);
-  const [isDetailPinned, setIsDetailPinned] = useState(false);
+  const [isDetailPinned, setIsDetailPinned] = useState(false);  // tooltip pinned by click
+  const [showDetailPanel, setShowDetailPanel] = useState(false); // FixedInfoPanel open via More Info btn
   const { t } = useTranslation(language);
   const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
@@ -176,6 +184,10 @@ const TaiwanMap: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_PIN_CONTOURS, JSON.stringify(showPinContours));
   }, [showPinContours]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_PIN_GLOW, JSON.stringify(showPinGlow));
+  }, [showPinGlow]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS, JSON.stringify(showSharedDialects));
@@ -435,21 +447,34 @@ const TaiwanMap: React.FC = () => {
     }
 
     // Desktop logic: Toggle dialects and Pin immediately
+    // Compute allPresent BEFORE the state setter so we can branch on it
+    const allPresentDesktop = dialectsArray.length > 0 && dialectsArray.every((x) => selectedDialects.has(x));
+
     if (dialectsArray.length) {
       setSelectedDialects((prev) => {
         const next = new Set(prev);
-        const allPresent = dialectsArray.every((x) => prev.has(x));
-        if (allPresent) dialectsArray.forEach((x) => next.delete(x));
+        if (allPresentDesktop) dialectsArray.forEach((x) => next.delete(x));
         else dialectsArray.forEach((x) => next.add(x));
         return next;
       });
 
-      setHoveredTown(props);
-      setIsDetailPinned(true);
-      if (dialectsArray.length > 0) setSelectedDetailDialect(dialectsArray[0]);
+      if (allPresentDesktop) {
+        // 2nd click on same area — toggle off: dismiss tooltip
+        setIsDetailPinned(false);
+        setShowDetailPanel(false);
+        setHoveredTown(null);
+        setSelectedDetailDialect(null);
+      } else {
+        // 1st click — pin the tooltip only, do NOT open the detail panel
+        setHoveredTown(props);
+        setIsDetailPinned(true);
+        setShowDetailPanel(false); // panel stays closed until More Info is clicked
+        if (dialectsArray.length > 0) setSelectedDetailDialect(dialectsArray[0]);
+      }
     } else {
       // Click outside or neutral area
       setIsDetailPinned(false);
+      setShowDetailPanel(false);
       setHoveredTown(null);
       setSelectedDetailDialect(null);
     }
@@ -463,115 +488,145 @@ const TaiwanMap: React.FC = () => {
       {/* Header */}
       <header className={`absolute top-0 left-0 right-0 z-30 p-4 md:p-6 flex justify-between items-start pointer-events-none transition-opacity duration-300 ${isExporting ? 'opacity-0' : 'opacity-100'}`}>
         <div className="flex flex-col gap-3 pointer-events-auto max-w-[80vw]">
-          <motion.div
-            layout
-            onClick={() => setIsTitleExpanded(!isTitleExpanded)}
-            className={isMobile && !isTitleExpanded ? 'cursor-pointer p-1' : 'bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-sm border border-stone-200 cursor-pointer hover:bg-white/90 transition-colors overflow-hidden'}
-          >
-            <div className="flex items-center gap-3">
-              <div className={isMobile && !isTitleExpanded ? '' : 'p-2 rounded-xl'}>
-                {/* <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} /> */}
-                <div
-                  className={
-                    isMobile && !isTitleExpanded
-                      ? ""
-                      : "rounded-xl p-0 bg-transparent w-10 h-10 md:w-12 md:h-12" // desktop size
-                  }
-                >
-                  <img
-                    src="/logo-test_t.png"
-                    alt="Taiwan Yincumin Map"
+          {/* Title card + desktop action buttons row */}
+          <div className="flex items-stretch gap-2">
+            <motion.div
+              layout
+              onClick={() => setIsTitleExpanded(!isTitleExpanded)}
+              className={isMobile && !isTitleExpanded ? 'cursor-pointer p-1' : 'bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-sm border border-stone-200 cursor-pointer hover:bg-white/90 transition-colors overflow-hidden'}
+            >
+              <div className="flex items-center gap-3">
+                <div className={isMobile && !isTitleExpanded ? '' : 'p-2 rounded-xl'}>
+                  {/* <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} /> */}
+                  <div
                     className={
                       isMobile && !isTitleExpanded
-                        ? "w-8 h-8 drop-shadow-md object-contain"
-                        : "w-full h-full object-contain" // fill container on desktop
+                        ? ""
+                        : "rounded-xl p-0 bg-transparent w-10 h-10 md:w-12 md:h-12" // desktop size
                     }
-                  />
+                  >
+                    <img
+                      src="/logo-test_t.png"
+                      alt="Taiwan Yincumin Map"
+                      className={
+                        isMobile && !isTitleExpanded
+                          ? "w-8 h-8 drop-shadow-md object-contain"
+                          : "w-full h-full object-contain" // fill container on desktop
+                      }
+                    />
+                  </div>
                 </div>
+                {(!isMobile || isTitleExpanded) && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex flex-col"
+                  >
+                    <h1 className="text-lg md:text-2xl font-bold text-stone-900 tracking-tight whitespace-nowrap">
+                      {t('title')}
+                    </h1>
+                    <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">{t('subtitle')}</p>
+                  </motion.div>
+                )}
               </div>
-              {(!isMobile || isTitleExpanded) && (
+              {isTitleExpanded && isMobile && (loading || error) && (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex flex-col"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  className="mt-3 pt-3 border-t border-stone-100"
                 >
-                  <h1 className="text-lg md:text-2xl font-bold text-stone-900 tracking-tight whitespace-nowrap">
-                    {t('title')}
-                  </h1>
-                  <p className="text-stone-500 text-[10px] md:text-sm mt-0.5 whitespace-nowrap tabular-nums">{t('subtitle')}</p>
+                  {loading && <p className="text-[10px] text-stone-400">{t('loadingData')}</p>}
+                  {error && <p className="text-[10px] text-red-500">{error}</p>}
                 </motion.div>
               )}
-            </div>
-            {isTitleExpanded && isMobile && (loading || error) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="mt-3 pt-3 border-t border-stone-100"
+              {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">{t('loadingData')}</p>}
+              {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
+            </motion.div>
+
+            {/* Export + Share — desktop only, icon-only with hover expand */}
+            <div className="hidden md:flex flex-col gap-2">
+              <button
+                onClick={handleExport}
+                disabled={isExporting}
+                title={t('exportImage')}
+                className="group flex-1 flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all text-stone-600 disabled:opacity-50 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200"
               >
-                {loading && <p className="text-[10px] text-stone-400">{t('loadingData')}</p>}
-                {error && <p className="text-[10px] text-red-500">{error}</p>}
-              </motion.div>
-            )}
-            {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">{t('loadingData')}</p>}
-            {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
-          </motion.div>
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <ImageDown className="w-4 h-4 shrink-0" />}
+                <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('exportImage')}</span>
+              </button>
+              <button
+                onClick={handleShare}
+                title={t('share')}
+                className="group flex-1 flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all text-stone-600 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200"
+              >
+                <Share2 className="w-4 h-4 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('share')}</span>
+              </button>
+            </div>
+          </div>
 
-          <MapSettingsMenu
-            isOpen={isSettingsOpen}
-            setIsOpen={setIsSettingsOpen}
-            showCountyBorders={showCountyBorders}
-            setShowCountyBorders={setShowCountyBorders}
-            showFixedInfo={showFixedInfo}
-            setShowFixedInfo={setShowFixedInfo}
-            showTownshipContours={showTownshipContours}
-            setShowTownshipContours={setShowTownshipContours}
-            showVillageBorders={showVillageBorders}
-            setShowVillageBorders={setShowVillageBorders}
-            showVillageColors={showVillageColors}
-            setShowVillageColors={setShowVillageColors}
-            showLvl1Names={showLvl1Names}
-            setShowLvl1Names={setShowLvl1Names}
-            showLvl2Names={showLvl2Names}
-            setShowLvl2Names={setShowLvl2Names}
-            showLvl3Names={showLvl3Names}
-            setShowLvl3Names={setShowLvl3Names}
-            showSharedDialects={showSharedDialects}
-            setShowSharedDialects={setShowSharedDialects}
-            showPins={showPins}
-            setShowPins={setShowPins}
-            showPinContours={showPinContours}
-            setShowPinContours={setShowPinContours}
-            language={language}
-            setLanguage={setLanguage}
-          />
-
-          <button
-            onClick={() => canvasRef.current?.resetZoom()}
-            title={t('resetZoom')}
-            className={`p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit ${isExporting ? 'hidden' : ''}`}
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span className="hidden md:inline">{t('resetZoom')}</span>
-          </button>
+          {/* Settings + Reset Zoom row */}
+          <div className="flex items-center gap-2">
+            <MapSettingsMenu
+              isOpen={isSettingsOpen}
+              setIsOpen={setIsSettingsOpen}
+              showCountyBorders={showCountyBorders}
+              setShowCountyBorders={setShowCountyBorders}
+              showFixedInfo={showFixedInfo}
+              setShowFixedInfo={setShowFixedInfo}
+              showTownshipContours={showTownshipContours}
+              setShowTownshipContours={setShowTownshipContours}
+              showVillageBorders={showVillageBorders}
+              setShowVillageBorders={setShowVillageBorders}
+              showVillageColors={showVillageColors}
+              setShowVillageColors={setShowVillageColors}
+              showLvl1Names={showLvl1Names}
+              setShowLvl1Names={setShowLvl1Names}
+              showLvl2Names={showLvl2Names}
+              setShowLvl2Names={setShowLvl2Names}
+              showLvl3Names={showLvl3Names}
+              setShowLvl3Names={setShowLvl3Names}
+              showSharedDialects={showSharedDialects}
+              setShowSharedDialects={setShowSharedDialects}
+              showPins={showPins}
+              setShowPins={setShowPins}
+              showPinContours={showPinContours}
+              setShowPinContours={setShowPinContours}
+              showPinGlow={showPinGlow}
+              setShowPinGlow={setShowPinGlow}
+              language={language}
+              setLanguage={setLanguage}
+            />
+            <button
+              onClick={() => canvasRef.current?.resetZoom()}
+              title={t('resetZoom')}
+              className={`group flex items-center gap-2 p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 pointer-events-auto hover:bg-stone-50 active:scale-95 transition-all text-stone-600 overflow-hidden w-[42px] hover:w-auto transition-[width] duration-200 ${isExporting ? 'hidden' : ''}`}
+            >
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-0 group-hover:w-auto overflow-hidden">{t('resetZoom')}</span>
+            </button>
+          </div>
 
           <div className={`flex flex-col items-start gap-2 pointer-events-auto ${isExporting ? 'hidden' : ''}`}>
+            {/* Mobile-only export button */}
             <button
               onClick={handleExport}
               disabled={isExporting}
               title={t('exportImage')}
-              className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit disabled:opacity-50"
+              className="md:hidden p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit disabled:opacity-50"
             >
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
-              <span className="hidden md:inline">{t('exportImage')}</span>
+              <span>{t('exportImage')}</span>
             </button>
 
+            {/* Mobile-only share button */}
             <button
               onClick={handleShare}
               title={t('share')}
-              className="p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
+              className="md:hidden p-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-stone-200 hover:bg-stone-50 active:scale-95 transition-all flex items-center gap-2 text-stone-600 font-medium text-sm w-fit"
             >
               <Share2 className="w-4 h-4" />
-              <span className="hidden md:inline">{t('share')}</span>
+              <span>{t('share')}</span>
             </button>
 
             {deferredPrompt && (
@@ -601,8 +656,9 @@ const TaiwanMap: React.FC = () => {
         showVillageColors={showVillageColors}
         showSharedDialects={showSharedDialects}
         pinnedLocations={pinnedLocations}
-        showPins={showPins && showVillageColors}
-        showPinContours={showPinContours && showVillageColors}
+        showPins={showPins}
+        showPinContours={showPinContours}
+        showPinGlow={showPinGlow}
         selectedDialects={selectedDialects}
         getDialects={getDialects}
         getVillageDialects={getVillageDialects}
@@ -611,12 +667,10 @@ const TaiwanMap: React.FC = () => {
         onLeave={handleLeave}
         onClickTown={onClickTown}
         onClickBackground={() => {
-          if (selectedDetailDialect) {
-            setSelectedDetailDialect(null);
-          }
-          if (hoveredTown) {
-            handleLeave();
-          }
+          setSelectedDetailDialect(null);
+          setHoveredTown(null);
+          setIsDetailPinned(false);
+          setShowDetailPanel(false);
         }}
         showLvl1Names={showLvl1Names}
         showLvl2Names={showLvl2Names}
@@ -648,7 +702,7 @@ const TaiwanMap: React.FC = () => {
 
       <CursorTooltip
         hoveredTown={hoveredTown}
-        showFixedInfo={showFixedInfo}
+        showFixedInfo={showFixedInfo || showDetailPanel}
         tooltipPos={tooltipPos}
         hoveredLabel={hoveredLabel}
         hoveredDialects={hoveredDialects}
@@ -656,20 +710,35 @@ const TaiwanMap: React.FC = () => {
         populationMap={populationMap}
         pinnedLocations={pinnedLocations}
         onTogglePin={handleTogglePin}
-        onShowMore={() => setIsDetailPinned(true)}
+        onShowMore={() => setShowDetailPanel(true)}
         onMouseEnter={() => {
+          (window as any).isHoveringTooltip_ycm = true;
           const win = window as any;
           if (win.hoverTimeout_ycm) clearTimeout(win.hoverTimeout_ycm);
         }}
-        onMouseLeave={handleLeave}
+        onMouseLeave={() => {
+          (window as any).isHoveringTooltip_ycm = false;
+          handleLeave();
+        }}
         language={language}
       />
+
+      {!isMobile && (
+        <div
+          className={`fixed top-4 right-[78px] z-40 transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'} ${isExporting ? 'hidden' : ''}`}
+        >
+          <ExplorationProgressPanel
+            userStats={userStats}
+            language={language}
+          />
+        </div>
+      )}
 
       <div
         className={`fixed top-6 right-6 z-40 pointer-events-none transition-all duration-300 ${isFilterOpen ? 'mr-80' : 'mr-0'} ${isExporting ? 'hidden' : ''}`}
       >
         <FixedInfoPanel
-          isOpen={showFixedInfo || isDetailPinned ? hoveredTown !== null : false}
+          isOpen={(showFixedInfo || showDetailPanel) && hoveredTown !== null}
           hoveredLabel={hoveredLabel}
           hoveredDialects={hoveredDialects}
           getDialectColor={getDialectColor}
@@ -679,7 +748,10 @@ const TaiwanMap: React.FC = () => {
           selectedDialect={selectedDetailDialect}
           onSelectDialect={setSelectedDetailDialect}
           onClose={() => {
+            setShowDetailPanel(false);
             setIsDetailPinned(false);
+            setHoveredTown(null);
+            setSelectedDetailDialect(null);
           }}
           language={language}
         />

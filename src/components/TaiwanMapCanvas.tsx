@@ -21,6 +21,7 @@ type Props = {
     pinnedLocations: PinnedMap;
     showPins: boolean;
     showPinContours: boolean;
+    showPinGlow: boolean;
 
     // Selection coloring
     selectedDialects: Set<string>;
@@ -107,6 +108,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             pinnedLocations,
             showPins,
             showPinContours,
+            showPinGlow,
             selectedDialects,
             getDialects,
             getVillageDialects,
@@ -131,6 +133,8 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
         const gLabelsRef = useRef<SVGGElement | null>(null);
         const gDefsRef = useRef<SVGDefsElement | null>(null);
         const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+        // Incremented by the main draw effect so fill/label effects re-run after SVG is ready
+        const [mapVersion, setMapVersion] = React.useState(0);
 
         // Expose resetZoom to parent via ref
         useImperativeHandle(ref, () => ({
@@ -155,7 +159,10 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             onLeave,
             onClickTown,
             showSharedDialects,
-            showTownshipContours
+            showTownshipContours,
+            showPinContours,
+            showPinGlow,
+            pinnedLocations
         });
 
         useEffect(() => {
@@ -169,9 +176,12 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 onLeave,
                 onClickTown,
                 showSharedDialects,
-                showTownshipContours
+                showTownshipContours,
+                showPinContours,
+                showPinGlow,
+                pinnedLocations
             };
-        });
+        }, [showCountyBorders, selectedDialects, getDialects, getVillageDialects, getCountyTownVillageFromProps, onHover, onLeave, onClickTown, showSharedDialects, showTownshipContours, showPinContours, showPinGlow, pinnedLocations]);
 
         const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
 
@@ -214,9 +224,45 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         const p = d.properties || {};
                         const { county, town, village } = getCountyTownVillageFromProps(p);
                         return pinnedLocations[`${county}|${town}|${village || ''}`] ? 1.5 : 0;
+                    })
+                    .attr('filter', (d: any) => {
+                        if (!showPinGlow) return 'none';
+                        const p = d.properties || {};
+                        const { county, town, village } = getCountyTownVillageFromProps(p);
+                        const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        if (!pin) return 'none';
+                        const filterId = `glow-${pin}`;
+                        // Lazily append the filter definition if not already present
+                        if (gDefsRef.current && !document.getElementById(filterId)) {
+                            const color = PIN_COLORS[pin];
+                            const filt = d3.select(gDefsRef.current)
+                                .append('filter')
+                                .attr('id', filterId)
+                                .attr('x', '-50%').attr('y', '-150%')
+                                .attr('width', '200%').attr('height', '300%');
+                            filt.append('feFlood')
+                                .attr('result', 'color')
+                                .attr('flood-color', color)
+                                .attr('flood-opacity', 0.7);
+                            filt.append('feComposite')
+                                .attr('in', 'color')
+                                .attr('in2', 'SourceAlpha')
+                                .attr('operator', 'in')
+                                .attr('result', 'coloredShape');
+                            filt.append('feGaussianBlur')
+                                .attr('in', 'coloredShape')
+                                .attr('stdDeviation', 4)
+                                .attr('result', 'blur');
+                            // Drop shadow offset upward (dy negative)
+                            const merge = filt.append('feMerge');
+                            merge.append('feMergeNode').attr('in', 'blur');
+                            merge.append('feMergeNode').attr('in', 'blur');
+                            merge.append('feMergeNode').attr('in', 'SourceGraphic');
+                        }
+                        return `url(#${filterId})`;
                     });
             }
-        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps, pinnedLocations, showPinContours]);
+        }, [selectedDialects, showSharedDialects, showVillageColors, getDialects, getVillageDialects, getCountyTownVillageFromProps, pinnedLocations, showPinContours, showPinGlow, mapVersion]);
 
         // 2. Toggle Layers Visibility
         useEffect(() => {
@@ -333,7 +379,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('stroke', 'white')
                     .attr('stroke-width', 0.5)
                     .attr('paint-order', 'stroke')
-                    .text((d: any) => getCountyTownVillageFromProps(d.properties).village);
+                    .text((d: any) => mt(getCountyTownVillageFromProps(d.properties).village));
             }
 
             if (showPins && villageFeatures) {
@@ -349,39 +395,24 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     .attr('class', 'pin-marker pointer-events-none')
                     .attr('transform', (d: any) => {
                         const center = path.centroid(d);
-                        return `translate(${center[0]}, ${center[1] - 4})`;
+                        return `translate(${center[0]}, ${center[1]})`;
                     });
 
-                pinGroup.append('circle')
-                    .attr('r', 10)
-                    .attr('fill', 'white')
-                    .attr('stroke', (d: any) => {
-                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
-                        const type = pinnedLocations[`${county}|${town}|${village || ''}`];
-                        return type ? PIN_COLORS[type] : '#ccc';
-                    })
-                    .attr('stroke-width', 2);
-
-                pinGroup.append('text')
-                    .attr('text-anchor', 'middle')
-                    .attr('dy', '0.35em')
-                    .attr('font-size', '8px')
+                pinGroup.append('path')
+                    .attr('d', 'M0,0 C-1.5,-1.5 -5,-6 -5,-10 A5,5 0 1,1 5,-10 C5,-6 1.5,-1.5 0,0 Z')
                     .attr('fill', (d: any) => {
                         const { county, town, village } = getCountyTownVillageFromProps(d.properties);
                         const type = pinnedLocations[`${county}|${town}|${village || ''}`];
                         return type ? PIN_COLORS[type] : '#ccc';
                     })
-                    .attr('font-weight', '900')
-                    .text((d: any) => {
-                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
-                        const type = pinnedLocations[`${county}|${town}|${village || ''}`];
-                        return type === 'loved' ? '♥' : '📍';
-                    });
+                    .attr('stroke', 'white')
+                    .attr('stroke-width', 1.5)
+                    .attr('filter', 'drop-shadow(0 2px 2px rgba(0,0,0,0.2))');
             }
 
             const currentTransform = d3.zoomTransform(svgRef.current as any);
             gLabels.attr('transform', currentTransform.toString());
-        }, [showLvl1Names, showLvl2Names, showLvl3Names, showPins, pinnedLocations, townFeatures, villageFeatures, getCountyTownVillageFromProps]);
+        }, [showLvl1Names, showLvl2Names, showLvl3Names, showPins, pinnedLocations, townFeatures, villageFeatures, getCountyTownVillageFromProps, mapVersion]);
 
         // 4. MAIN DRAW
         useEffect(() => {
@@ -437,8 +468,14 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                     })
                     .on('mouseleave', (event: any) => {
                         if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
-                        stateRef.current.onLeave();
+                        // Reset stroke immediately (visual feedback)
                         d3.select(event.currentTarget).attr('stroke', 'none');
+                        // Delay onLeave — guard with flag in case tooltip mouseenter already fired
+                        (window as any).hoverTimeout_ycm = setTimeout(() => {
+                            if (!(window as any).isHoveringTooltip_ycm) {
+                                stateRef.current.onLeave();
+                            }
+                        }, 200);
                     })
                     .on('click', (event: any, d: any) => {
                         if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
@@ -470,10 +507,16 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 })
                 .on('mouseleave', function () {
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
-                    stateRef.current.onLeave();
+                    // Reset stroke immediately (visual feedback)
                     const s = stateRef.current.showTownshipContours ? '#cbd5e1' : '#ffffff';
                     const w = stateRef.current.showTownshipContours ? 0.5 : 0.3;
                     d3.select(this).attr('stroke', s).attr('stroke-width', w);
+                    // Delay onLeave — guard with flag in case tooltip mouseenter already fired
+                    (window as any).hoverTimeout_ycm = setTimeout(() => {
+                        if (!(window as any).isHoveringTooltip_ycm) {
+                            stateRef.current.onLeave();
+                        }
+                    }, 200);
                 })
                 .on('click', (event: any, d: any) => {
                     if ((window as any).hoverTimeout_ycm) clearTimeout((window as any).hoverTimeout_ycm);
@@ -520,7 +563,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             }
 
             // Initial fills (Sync with current selection)
-            const { selectedDialects, showSharedDialects } = stateRef.current;
+            const { selectedDialects, showSharedDialects, showPinContours, showPinGlow, pinnedLocations } = stateRef.current;
             d3.select(gTownshipsRef.current).selectAll('.township')
                 .attr('fill', (d: any) => {
                     if (showVillageColors) return 'transparent';
@@ -530,16 +573,51 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                 .attr('pointer-events', showVillageColors ? 'none' : 'auto');
 
             if (villageFeatures) {
-                d3.select(gVillagePolygonsRef.current).selectAll('.village-poly')
+                d3.select(gVillagePolygonsRef.current).selectAll<SVGPathElement, any>('.village-poly')
                     .attr('fill', (d: any) => {
                         const { county, town, village } = getCountyTownVillageFromProps(d.properties);
                         const dialects = getVillageDialects(county, town, village);
                         return generateAreaFill(dialects, selectedDialects, showSharedDialects, gDefsRef);
                     })
+                    .attr('stroke', (d: any) => {
+                        if (!showPinContours) return 'none';
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        return pin ? PIN_COLORS[pin] : 'none';
+                    })
+                    .attr('stroke-width', (d: any) => {
+                        if (!showPinContours) return 0;
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        return pinnedLocations[`${county}|${town}|${village || ''}`] ? 1.5 : 0;
+                    })
+                    .attr('filter', (d: any) => {
+                        if (!showPinGlow) return 'none';
+                        const { county, town, village } = getCountyTownVillageFromProps(d.properties);
+                        const pin = pinnedLocations[`${county}|${town}|${village || ''}`];
+                        if (!pin) return 'none';
+                        const filterId = `glow-${pin}`;
+                        if (gDefsRef.current && !document.getElementById(filterId)) {
+                            const color = PIN_COLORS[pin];
+                            const filt = d3.select(gDefsRef.current).append('filter').attr('id', filterId).attr('x', '-50%').attr('y', '-100%').attr('width', '200%').attr('height', '200%');
+                            filt.append('feFlood').attr('flood-color', color).attr('flood-opacity', 0.8).attr('result', 'flood');
+                            filt.append('feComposite').attr('in', 'flood').attr('in2', 'SourceAlpha').attr('operator', 'in').attr('result', 'mask');
+                            filt.append('feGaussianBlur').attr('in', 'mask').attr('stdDeviation', 2).attr('result', 'blur');
+                            // Add upward offset
+                            filt.append('feOffset').attr('in', 'blur').attr('dy', -3).attr('result', 'offsetBlur');
+
+                            const merge = filt.append('feMerge');
+                            merge.append('feMergeNode').attr('in', 'offsetBlur');
+                            merge.append('feMergeNode').attr('in', 'SourceGraphic');
+                        }
+                        return `url(#${filterId})`;
+                    })
                     .attr('pointer-events', showVillageColors ? 'auto' : 'none');
 
                 d3.select(gVillagePolygonsRef.current).attr('display', showVillageColors ? 'block' : 'none');
             }
+
+            // Signal to fill & label effects that the SVG is now ready
+            setMapVersion(v => v + 1);
 
         }, [townFeatures, villageFeatures, countyBorders, villageBorders]);
 

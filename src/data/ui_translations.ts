@@ -7,7 +7,7 @@ export const uiTranslations = {
         subtitle: '臺灣原住民族語分佈',
         resetZoom: '重設縮放',
         exportImage: '匯出圖片',
-        share: '分享',
+        share: '分享網站',
         installApp: '安裝 App',
         loadingData: '正在載入地理數據...',
         searching: '搜尋中...',
@@ -32,8 +32,10 @@ export const uiTranslations = {
         villageColors: '村里細節著色 (Mode B)',
         sharedDialects: '重疊區域分色',
         showFixedInfo: '固定資訊面板',
+        pinsSection: '踩點記錄',
         showPins: '顯示踩點圖示',
         showPinContours: '踩點分類邊框',
+        showPinGlow: '踩點區域光暈',
         languageSelect: '語言 / Language',
 
         // Filter Panel
@@ -82,8 +84,10 @@ export const uiTranslations = {
         villageColors: 'Enble per-village colors',
         sharedDialects: 'Show overlaps',
         showFixedInfo: 'Pinned Sidebar',
+        pinsSection: 'Activity Pins (Village Mode)',
         showPins: 'Display activity pins',
         showPinContours: 'Pin-themed borders',
+        showPinGlow: 'Pin area glow',
         languageSelect: 'Language / 語言',
 
         // Filter Panel

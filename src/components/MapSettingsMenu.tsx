@@ -36,6 +36,8 @@ type Props = {
     setShowPins: (v: boolean) => void;
     showPinContours: boolean;
     setShowPinContours: (v: boolean) => void;
+    showPinGlow: boolean;
+    setShowPinGlow: (v: boolean) => void;
 
     language: 'zh' | 'en';
     setLanguage: (v: 'zh' | 'en') => void;
@@ -66,6 +68,8 @@ const MapSettingsMenu: React.FC<Props> = ({
     setShowPins,
     showPinContours,
     setShowPinContours,
+    showPinGlow,
+    setShowPinGlow,
     language,
     setLanguage,
 }) => {
@@ -123,18 +127,30 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         value={showSharedDialects}
                                         onToggle={() => setShowSharedDialects(!showSharedDialects)}
                                     />
-                                    <div className="pt-2 border-t border-stone-100 space-y-3">
-                                        <ToggleRow
-                                            label={t('showPins')}
-                                            value={showPins}
-                                            onToggle={() => setShowPins(!showPins)}
-                                        />
-                                        <ToggleRow
-                                            label={t('showPinContours')}
-                                            value={showPinContours}
-                                            onToggle={() => setShowPinContours(!showPinContours)}
-                                        />
-                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECTION: Pins */}
+                            <div className="pt-2 border-t border-stone-100">
+                                <h3 className="text-[16px] font-black text-stone-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    {t('pinsSection')}
+                                </h3>
+                                <div className="space-y-3">
+                                    <ToggleRow
+                                        label={t('showPins')}
+                                        value={showPins}
+                                        onToggle={() => setShowPins(!showPins)}
+                                    />
+                                    <ToggleRow
+                                        label={t('showPinContours')}
+                                        value={showPinContours}
+                                        onToggle={() => setShowPinContours(!showPinContours)}
+                                    />
+                                    <ToggleRow
+                                        label={t('showPinGlow')}
+                                        value={showPinGlow}
+                                        onToggle={() => setShowPinGlow(!showPinGlow)}
+                                    />
                                 </div>
                             </div>
 
