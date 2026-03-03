@@ -1,8 +1,15 @@
 CORE
-basic analytics: users, ?
+
+legend!
+1. mobile: make it 20% narrower when expanded. 
+2. pc and mobile: make it draggable and resizeble (only pc)
+3. pc and mobile: add a reset "circle arrow" button in the header to reset position and size after modification by user
+4. mobile: use same button (collaspsed) width as the filter button
+5. mobile: duplicate the current icon and place it in the filter button (right)
+
+fix search fonction (lang vs places)
 ?optimize loading
 tabs at bottom: phrases, culture, exploration, notes, options (themes, ?)
-fix search fonction (lang vs places)
 title
 
 FEATURES
