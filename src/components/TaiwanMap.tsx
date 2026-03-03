@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { trackEvent } from '../hooks/useAnalytics';
 import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2, Smartphone, Layout } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toPng } from 'html-to-image';
@@ -221,8 +222,10 @@ const TaiwanMap: React.FC = () => {
       const next = { ...prev };
       if (!type) {
         delete next[key];
+        trackEvent('unpin_location', { county, town, village });
       } else {
         next[key] = type;
+        trackEvent('pin_location', { county, town, village, type });
       }
       return next;
     });
@@ -278,6 +281,7 @@ const TaiwanMap: React.FC = () => {
         dialects.forEach((d) => next.add(d));
         return next;
       });
+      trackEvent('select_search_result', { county: township.county, town: township.town, dialects: dialects.join(',') });
     }
     setSearchTerm('');
     setSearchResults([]);
@@ -294,25 +298,36 @@ const TaiwanMap: React.FC = () => {
       else dialects.forEach((d) => next.add(d));
       return next;
     });
+    trackEvent('toggle_language_group', { languageGroup: lang, allSelected: !allSelected });
   };
 
   const toggleDialect = (dialect: string) => {
     setSelectedDialects((prev) => {
       const next = new Set(prev);
-      if (next.has(dialect)) next.delete(dialect);
-      else next.add(dialect);
+      if (next.has(dialect)) {
+        next.delete(dialect);
+        trackEvent('toggle_dialect', { dialect, action: 'remove' });
+      } else {
+        next.add(dialect);
+        trackEvent('toggle_dialect', { dialect, action: 'add' });
+      }
       return next;
     });
   };
 
   const selectAll = () => {
     setSelectedDialects(new Set(Object.values(languageGroups).flat()));
+    trackEvent('select_all');
   };
-  const clearAll = () => setSelectedDialects(new Set());
+  const clearAll = () => {
+    setSelectedDialects(new Set());
+    trackEvent('clear_all');
+  };
 
   const handleExport = async (options?: { hideLegend?: boolean; share?: boolean }) => {
     if (!mapContainerRef.current) return;
     setIsExporting(true);
+    trackEvent('export_image', { mode: options?.share ? 'share' : 'download' });
     if (options?.hideLegend) setHideLegendForExport(true);
 
     // Brief delay to allow React to hide elements and expand legend
@@ -371,6 +386,7 @@ const TaiwanMap: React.FC = () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    trackEvent('install_app_click', { outcome });
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
     }
@@ -389,7 +405,9 @@ const TaiwanMap: React.FC = () => {
       } else {
         await navigator.clipboard.writeText(window.location.href);
         alert(t('urlCopied'));
+        trackEvent('share_link', { method: 'clipboard' });
       }
+      trackEvent('share_link', { method: 'native' });
     } catch (err) {
       console.error('Share failed:', err);
     }
@@ -517,6 +535,11 @@ const TaiwanMap: React.FC = () => {
       setShowDetailPanel(false);
       setHoveredTown(null);
       setSelectedDetailDialect(null);
+    }
+
+    if (props) {
+      const { county, town } = getCountyTownVillageFromProps(props);
+      trackEvent('click_area', { county, town, dialects: dialectsArray.join(',') });
     }
   };
 
@@ -763,6 +786,7 @@ const TaiwanMap: React.FC = () => {
                   onClick={() => {
                     setActiveMobileMenu(null);
                     canvasRef.current?.resetZoom();
+                    trackEvent('reset_map_zoom');
                   }}
                   className="h-full w-11 flex items-center justify-center hover:bg-stone-50 active:scale-95 transition-all text-stone-600"
                 >

@@ -1,5 +1,5 @@
-import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { trackEvent } from '../hooks/useAnalytics';
 import { Settings, Globe, ChevronDown } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -140,7 +140,10 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         <ColorRow
                                             label={t('mapBgColor')}
                                             value={mapBgColor}
-                                            onChange={setMapBgColor}
+                                            onChange={(val) => {
+                                                setMapBgColor(val);
+                                                trackEvent('change_bg_color', { color: val });
+                                            }}
                                         />
                                     </div>
                                 </div>
@@ -220,7 +223,11 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         <div className="relative group/select">
                                             <select
                                                 value={language}
-                                                onChange={(e) => setLanguage(e.target.value as 'zh' | 'en')}
+                                                onChange={(e) => {
+                                                    const val = e.target.value as 'zh' | 'en';
+                                                    setLanguage(val);
+                                                    trackEvent('change_language', { language: val });
+                                                }}
                                                 className="w-full appearance-none bg-stone-100 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-stone-700 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all pr-10 hover:bg-stone-200"
                                             >
                                                 <option value="zh">繁體中文</option>
