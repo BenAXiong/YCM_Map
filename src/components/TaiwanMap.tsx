@@ -1032,6 +1032,7 @@ const TaiwanMap: React.FC = () => {
         showLvl2Names={showLvl2Names}
         showLvl3Names={showLvl3Names}
         language={language}
+        hoveredTown={hoveredTown}
       />
 
       <DialectFilterPanel

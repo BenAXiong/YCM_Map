@@ -42,6 +42,7 @@ type Props = {
     showLvl3Names: boolean;
     language: 'zh' | 'en';
     mapBgColor: string;
+    hoveredTown: any | null;
 };
 import { useTranslation } from '../hooks/useTranslation';
 import type { PinnedMap } from './types';
@@ -124,6 +125,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
             showLvl3Names,
             language,
             mapBgColor,
+            hoveredTown,
         },
         ref
     ) => {
@@ -138,6 +140,12 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
         const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
         // Incremented by the main draw effect so fill/label effects re-run after SVG is ready
         const [mapVersion, setMapVersion] = React.useState(0);
+
+        // Keep a stable ref of hoveredTown to use in our D3 handlers without triggering redraws for the whole map
+        const activeHoveredTownRef = useRef(hoveredTown);
+        useEffect(() => {
+            activeHoveredTownRef.current = hoveredTown;
+        }, [hoveredTown]);
 
         // Expose resetZoom to parent via ref
         useImperativeHandle(ref, () => ({
@@ -223,6 +231,36 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
         }, [showCountyBorders, selectedDialects, getDialects, getVillageDialects, getCountyTownVillageFromProps, onHover, onLeave, onClickTown, showSharedDialects, showTownshipContours, showPinContours, showPinGlow, pinnedLocations]);
 
         const norm = (s: string) => (s ?? '').trim().replace('台', '臺');
+
+        // Apply visual pulsing highlight to the hoveredTown
+        useEffect(() => {
+            if (!hoveredTown) {
+                if (gTownshipsRef.current) d3.select(gTownshipsRef.current).selectAll('.township').classed('map-pulse-focus', false);
+                if (gVillagePolygonsRef.current) d3.select(gVillagePolygonsRef.current).selectAll('.village-poly').classed('map-pulse-focus', false);
+                return;
+            }
+
+            const activeProps = getCountyTownVillageFromProps(hoveredTown);
+            const isVillageLevel = !!activeProps.village;
+
+            if (gTownshipsRef.current) {
+                d3.select(gTownshipsRef.current).selectAll('.township')
+                    .classed('map-pulse-focus', (d: any) => {
+                        if (isVillageLevel) return false;
+                        const p = getCountyTownVillageFromProps(d.properties);
+                        return norm(p.county) === norm(activeProps.county) && norm(p.town) === norm(activeProps.town);
+                    });
+            }
+
+            if (gVillagePolygonsRef.current) {
+                d3.select(gVillagePolygonsRef.current).selectAll('.village-poly')
+                    .classed('map-pulse-focus', (d: any) => {
+                        if (!isVillageLevel) return false;
+                        const p = getCountyTownVillageFromProps(d.properties);
+                        return norm(p.county) === norm(activeProps.county) && norm(p.town) === norm(activeProps.town) && norm(p.village) === norm(activeProps.village);
+                    });
+            }
+        }, [hoveredTown, getCountyTownVillageFromProps, mapVersion]);
 
         // 1. Update fills & strokes when selection or mode changes
         useEffect(() => {

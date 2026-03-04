@@ -17,3 +17,20 @@
     background: #d6d3d1;
 }
 
+@keyframes map-pulse-focus {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.map-pulse-focus {
+    animation: map-pulse-focus 4s infinite ease-in-out;
+}

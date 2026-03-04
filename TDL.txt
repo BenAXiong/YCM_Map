@@ -12,6 +12,7 @@ MODE tab: YCM vs other themes?
 
 UI
 big Rosette upper left + setting top right + other buttons?
+imporve overlap styling
 filters: try eyes icons instead of checkboxes
 better glow
 add settings icons
