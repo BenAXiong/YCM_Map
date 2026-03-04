@@ -99,12 +99,10 @@ Legend style (font size, bg transparency, borders, style type) is persisted to `
 
 ## Known Limitations & Tech Debt
 
-- **`TaiwanMap.tsx` is too large** (~1150 lines). State management, handlers, search logic, and render are all co-located. Future: extract into custom hooks and sub-components.
-- **`any` types everywhere** in D3 feature data — TopoJSON property shapes aren't typed, so `d.properties` is always `any`. Would benefit from proper type generation from the JSON schema.
-- **`dialects.full.json` is dead** — it exists in `src/data/` but is never imported. Safe to delete (41KB saved).
-- **Search is synchronous** — runs on every keystroke against the full township list. Should be debounced.
-- **Village data re-fetches** on toggling village mode off and back on (URL going `undefined → url → undefined → url`). Should cache in a ref.
-- **`@google/genai`** and **`express`** / **`better-sqlite3`** are listed as runtime dependencies but appear to be unused in the front-end build. Review and move to devDependencies or remove.
+- ✅ **Structural Cleanup (Bundle E)** — Extracted settings and search into custom hooks. Purged unused dependencies. (Done 2026-03-04).
+- **`TaiwanMap.tsx` size** — Now ~950 lines (improved from 1150). Further extraction of UI sub-components possible as future debt.
+- **`any` types** — Still present in D3 feature data. Low priority for now.
+- **`@google/genai`, `express`, `better-sqlite3`** — Removed from `package.json`.
 
 ---
 
@@ -112,10 +110,11 @@ Legend style (font size, bg transparency, borders, style type) is persisted to `
 
 See `performance_analysis.md` (in brain artifacts) for the full ranked list.
 
-**Top priorities:**
-1. ✅ Self-host TopoJSON (done 2026-03-04)
-2. 🔄 Bundle B: search debounce + fill pre-compute + dead file delete
-3. 🔄 Bundle A: `React.memo` + `useCallback` + hover batching
+1. ✅ Self-host TopoJSON (Done)
+2. ✅ Bundle B: search debounce + fill pre-compute + dead file delete (Done)
+3. ✅ Bundle A: `React.memo` + `useCallback` + hover batching (Done)
+4. ✅ Bundle C: Lazy-load village data (Done)
+5. 🔄 Deployment / Manifest optimization (Optional)
 
 ---
 

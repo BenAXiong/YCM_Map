@@ -26,7 +26,7 @@ const MapLegend: React.FC<Props> = ({
     const { t, mt } = useTranslation(language, showUsageNames);
     const [isExpanded, setIsExpanded] = useState(!isMobile);
     const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
-    const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
+    const [customSize, setCustomSize] = useState<{ width?: number; height?: number } | null>(null);
     const [legendFontSize, setLegendFontSize] = useState(13);
 
     const [showHeader, setShowHeader] = useState(true);
@@ -162,16 +162,16 @@ const MapLegend: React.FC<Props> = ({
         const startW = rect?.width || 288;
         const startPosY = dragPos.y;
 
-        // Capture current dimensions to preserve the axis that isn't being resized
+        // Capture current dimensions
         const currentCustomWidth = customSize?.width || startW;
         const currentCustomHeight = customSize?.height || startH;
 
         const onPointerMove = (moveEvent: PointerEvent) => {
             const deltaY = moveEvent.clientY - startY;
             const deltaX = moveEvent.clientX - startX;
-            let newH = currentCustomHeight;
-            let newW = currentCustomWidth;
-            let newY = startPosY;
+            let newH = customSize?.height; // Keep as is unless dragging top/bottom
+            let newW = customSize?.width;  // Keep as is unless dragging right
+            let newY = dragPos.y;
 
             if (direction === 'bottom') {
                 newH = Math.max(120, startH + deltaY);
@@ -185,8 +185,11 @@ const MapLegend: React.FC<Props> = ({
                 newW = Math.max(200, startW + deltaX);
             }
 
-            setCustomSize({ width: newW, height: newH });
-            setDragPos(prev => ({ ...prev, y: newY }));
+            setCustomSize(prev => ({
+                width: newW ?? prev?.width,
+                height: newH ?? prev?.height
+            }));
+            if (direction === 'top') setDragPos(prev => ({ ...prev, y: newY }));
         };
 
         const onPointerUp = () => {
@@ -201,6 +204,7 @@ const MapLegend: React.FC<Props> = ({
     return (
         <AnimatePresence>
             <motion.div
+                layout
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => { setIsHovered(false); setShowOptions(false); }}
                 animate={{
@@ -208,7 +212,7 @@ const MapLegend: React.FC<Props> = ({
                     y: dragPos.y,
                     width: effectiveExpanded
                         ? (customSize?.width || (isMobile ? '205px' : '288px'))
-                        : (isMobile ? '144px' : '288px'),
+                        : (isMobile ? '144px' : (customSize?.width || '288px')),
                     height: effectiveExpanded
                         ? (customSize?.height || 'auto')
                         : (isMobile ? '48px' : 'auto')
@@ -405,20 +409,20 @@ const MapLegend: React.FC<Props> = ({
                     className="overflow-hidden MapLegend-content-container relative z-40 rounded-b-2xl"
                 >
                     <div
-                        className={`p-4 pt-0 space-y-4 overflow-y-auto custom-scrollbar ${transparentBg ? 'bg-transparent' : ''}`}
-                        style={{ maxHeight: customSize ? `${customSize.height - 56}px` : '80vh' }}
+                        className={`p-4 pt-0 space-y-2 overflow-y-auto custom-scrollbar ${transparentBg ? 'bg-transparent' : ''}`}
+                        style={{ maxHeight: (customSize && customSize.height) ? `${customSize.height - 56}px` : (isMobile ? '60vh' : '70vh') }}
                         onPointerDown={(e) => isMobile && e.stopPropagation()}
                     >
                         <div className={`border-t pt-3 ${transparentBorders || transparentBg ? 'border-transparent' : 'border-stone-100'}`} />
                         {activeLanguages.map(({ lang, dialects }) => (
                             <div key={lang} className="flex flex-col">
                                 <span
-                                    className="font-bold text-black uppercase tracking-widest mb-2 px-1"
+                                    className="font-bold text-black uppercase tracking-widest mb-1 px-1"
                                     style={{ fontSize: `${legendFontSize + 2}px` }}
                                 >
                                     {mt(lang)}
                                 </span>
-                                <div className="flex flex-col gap-1.5 pl-2 mb-3">
+                                <div className="flex flex-col gap-1.5 pl-2">
                                     {dialects.map((dialect) => {
                                         const color = getDialectColor(dialect);
                                         return (
@@ -445,7 +449,7 @@ const MapLegend: React.FC<Props> = ({
                                                     />
                                                 )}
                                                 <span
-                                                    className={`font-bold truncate leading-tight flex-1`}
+                                                    className={`truncate leading-tight flex-1`}
                                                     style={{
                                                         fontSize: `${legendFontSize}px`,
                                                         textShadow: legendStyle === 'full' ? '0px 1px 2px rgba(0,0,0,0.3)' : 'none'
