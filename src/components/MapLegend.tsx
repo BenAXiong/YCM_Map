@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronUp, ListFilter, RotateCcw, Move } from 'lucide-react';
+import { ChevronUp, ListFilter, RotateCcw, Plus, Minus, MoreVertical, EyeOff, Image as ImageIcon, Square, LayoutGrid, Save, Type } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { trackEvent } from '../hooks/useAnalytics';
 
@@ -27,6 +27,35 @@ const MapLegend: React.FC<Props> = ({
     const [isExpanded, setIsExpanded] = useState(!isMobile);
     const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
     const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
+    const [legendFontSize, setLegendFontSize] = useState(13);
+
+    const [showHeader, setShowHeader] = useState(true);
+    const [transparentBg, setTransparentBg] = useState(false);
+    const [transparentBorders, setTransparentBorders] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [legendStyle, setLegendStyle] = useState<'dots' | 'rectangles' | 'full'>('dots');
+    const [showToast, setShowToast] = useState(false);
+
+    const STORAGE_KEY = 'ycm_legend_settings';
+
+    // Load saved settings
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.customSize !== undefined) setCustomSize(parsed.customSize);
+                if (parsed.legendFontSize !== undefined) setLegendFontSize(parsed.legendFontSize);
+                if (parsed.showHeader !== undefined) setShowHeader(parsed.showHeader);
+                if (parsed.transparentBg !== undefined) setTransparentBg(parsed.transparentBg);
+                if (parsed.transparentBorders !== undefined) setTransparentBorders(parsed.transparentBorders);
+                if (parsed.legendStyle !== undefined) setLegendStyle(parsed.legendStyle);
+            }
+        } catch (e) {
+            console.error('Failed to load legend settings', e);
+        }
+    }, []);
 
     useEffect(() => {
         if (alwaysExpanded) {
@@ -40,7 +69,37 @@ const MapLegend: React.FC<Props> = ({
         e.stopPropagation();
         setDragPos({ x: 0, y: 0 });
         setCustomSize(null);
+        setLegendFontSize(13);
+        setShowHeader(true);
+        setTransparentBg(false);
+        setTransparentBorders(false);
+        setLegendStyle('dots');
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (e) { }
         trackEvent('reset_legend_layout');
+    };
+
+    const handleSaveSettings = () => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                customSize,
+                legendFontSize,
+                showHeader,
+                transparentBg,
+                transparentBorders,
+                legendStyle
+            }));
+
+            // Optional visually appealing feedback
+            setShowOptions(false);
+            setShowToast(true);
+            setTimeout(() => {
+                setShowToast(false);
+            }, 2000);
+        } catch (e) {
+            console.error('Failed to save legend settings', e);
+        }
     };
 
     const effectiveExpanded = alwaysExpanded || isExpanded;
@@ -97,13 +156,21 @@ const MapLegend: React.FC<Props> = ({
         e.preventDefault();
         e.stopPropagation();
         const startY = e.clientY;
+        const startX = e.clientX;
         const rect = e.currentTarget.parentElement?.getBoundingClientRect();
         const startH = rect?.height || 300;
+        const startW = rect?.width || 288;
         const startPosY = dragPos.y;
+
+        // Capture current dimensions to preserve the axis that isn't being resized
+        const currentCustomWidth = customSize?.width || startW;
+        const currentCustomHeight = customSize?.height || startH;
 
         const onPointerMove = (moveEvent: PointerEvent) => {
             const deltaY = moveEvent.clientY - startY;
-            let newH = startH;
+            const deltaX = moveEvent.clientX - startX;
+            let newH = currentCustomHeight;
+            let newW = currentCustomWidth;
             let newY = startPosY;
 
             if (direction === 'bottom') {
@@ -114,9 +181,11 @@ const MapLegend: React.FC<Props> = ({
                     newH = startH + addH;
                     newY = startPosY + deltaY;
                 }
+            } else if (direction === 'right') {
+                newW = Math.max(200, startW + deltaX);
             }
 
-            setCustomSize({ width: 288, height: newH });
+            setCustomSize({ width: newW, height: newH });
             setDragPos(prev => ({ ...prev, y: newY }));
         };
 
@@ -132,6 +201,8 @@ const MapLegend: React.FC<Props> = ({
     return (
         <AnimatePresence>
             <motion.div
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => { setIsHovered(false); setShowOptions(false); }}
                 animate={{
                     x: dragPos.x,
                     y: dragPos.y,
@@ -143,7 +214,9 @@ const MapLegend: React.FC<Props> = ({
                         : (isMobile ? '48px' : 'auto')
                 }}
                 onPointerDown={handleDragStart}
-                className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-stone-200 flex flex-col pointer-events-auto overflow-hidden transition-[background-color] duration-300 z-[45] relative group/legend select-none cursor-grab active:cursor-grabbing"
+                className={`rounded-2xl flex flex-col pointer-events-auto overflow-visible transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 z-[45] relative group/legend select-none cursor-grab active:cursor-grabbing ${transparentBg ? 'bg-transparent shadow-none backdrop-blur-none' : 'bg-white/95 backdrop-blur-xl shadow-2xl'
+                    } ${transparentBorders ? 'border-transparent' : 'border border-stone-200'
+                    }`}
                 style={{ touchAction: 'none' }}
             >
                 {/* Resize Handles - PC Only and only when expanded */}
@@ -151,11 +224,19 @@ const MapLegend: React.FC<Props> = ({
                     <>
                         <div className="absolute top-0 left-0 w-full h-2.5 cursor-ns-resize z-50 hover:bg-emerald-500/10 transition-colors" onPointerDown={(e) => handleResize('top', e)} />
                         <div className="absolute bottom-0 left-0 w-full h-2.5 cursor-ns-resize z-50 hover:bg-emerald-500/10 transition-colors" onPointerDown={(e) => handleResize('bottom', e)} />
+                        <div className="absolute top-0 right-0 w-2.5 h-full cursor-ew-resize z-50 hover:bg-emerald-500/10 transition-colors" onPointerDown={(e) => handleResize('right', e)} />
                     </>
                 )}
 
                 {/* Header Display */}
-                <div className="flex flex-col shrink-0">
+                <motion.div
+                    initial={false}
+                    animate={{
+                        height: (isMobile || showHeader || isHovered) ? 'auto' : 0,
+                        opacity: (isMobile || showHeader || isHovered) ? 1 : 0
+                    }}
+                    className={`flex flex-col shrink-0 ${(isMobile || showHeader || isHovered) ? 'overflow-visible relative z-50' : 'overflow-hidden'}`}
+                >
                     <div
                         onClick={(e) => {
                             if (isMobile && !effectiveExpanded) {
@@ -163,7 +244,7 @@ const MapLegend: React.FC<Props> = ({
                                 setIsExpanded(true);
                             }
                         }}
-                        className={`flex items-center justify-between ${isMobile && !effectiveExpanded ? 'px-4 h-12 active:scale-95' : isMobile ? 'p-3' : 'p-3.5'} w-full transition-all duration-300 relative bg-white/50 group/legend-header cursor-pointer`}
+                        className={`flex items-center justify-between ${isMobile && !effectiveExpanded ? 'px-4 h-12 active:scale-95' : isMobile ? 'p-3' : 'p-3.5'} w-full transition-all duration-300 relative ${transparentBg ? 'bg-transparent' : 'bg-white/50'} group/legend-header cursor-pointer`}
                     >
                         {isMobile && !effectiveExpanded ? (
                             <>
@@ -186,13 +267,10 @@ const MapLegend: React.FC<Props> = ({
                                     <span className={`font-black text-stone-900 uppercase tracking-widest ${isMobile ? 'text-[11px]' : 'text-xs'} select-none`}>
                                         {t('legend')}
                                     </span>
-                                    {!isMobile && (
-                                        <Move className="w-3.5 h-3.5 text-stone-300 opacity-20 group-hover/legend-header:opacity-100 transition-opacity" />
-                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                    {(dragPos.x !== 0 || dragPos.y !== 0 || customSize !== null) && (
+                                    {(dragPos.x !== 0 || dragPos.y !== 0 || customSize !== null || !showHeader || transparentBg || transparentBorders || legendFontSize !== 13) && (
                                         <button
                                             onClick={handleReset}
                                             onPointerDown={(e) => e.stopPropagation()}
@@ -202,6 +280,101 @@ const MapLegend: React.FC<Props> = ({
                                             <RotateCcw className="w-3.5 h-3.5" />
                                         </button>
                                     )}
+
+                                    {/* Options Dropdown */}
+                                    <div className="relative">
+                                        <button
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowOptions(!showOptions);
+                                            }}
+                                            className="p-1 hover:bg-stone-200 rounded-lg transition-colors text-stone-400 hover:text-stone-600"
+                                            title="Options"
+                                        >
+                                            <MoreVertical className={`${isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-emerald-600`} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {showOptions && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.9, x: -10 }}
+                                                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.9, x: -10 }}
+                                                    className="absolute top-0 left-[calc(100%+0.5rem)] bg-white shadow-xl rounded-xl border border-stone-100 w-48 overflow-hidden z-[60] py-1 pointer-events-auto"
+                                                >
+                                                    {/* Font Size Tuner */}
+                                                    <div className="flex items-center justify-between px-3 py-2 border-b border-stone-50">
+                                                        <span className="flex items-center gap-2.5 text-stone-700 text-xs">
+                                                            <Type className="w-3.5 h-3.5" />
+                                                            {language === 'zh' ? '字體大小' : 'Font Size'}
+                                                        </span>
+                                                        <div className="flex items-center bg-stone-100 rounded-md p-0.5" onPointerDown={(e) => e.stopPropagation()}>
+                                                            <button
+                                                                onClick={() => setLegendFontSize(v => Math.max(8, v - 1))}
+                                                                className="p-1 hover:bg-white rounded text-stone-400 hover:text-emerald-600 transition-all active:scale-90"
+                                                            >
+                                                                <Minus className="w-3 h-3" />
+                                                            </button>
+                                                            <div className="w-[1px] h-3 bg-stone-200 mx-0.5" />
+                                                            <button
+                                                                onClick={() => setLegendFontSize(v => Math.min(24, v + 1))}
+                                                                className="p-1 hover:bg-white rounded text-stone-400 hover:text-emerald-600 transition-all active:scale-90"
+                                                            >
+                                                                <Plus className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        onClick={() => { setShowHeader(!showHeader); }}
+                                                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 hover:bg-emerald-50 text-stone-700 text-xs transition-colors"
+                                                    >
+                                                        <EyeOff className="w-3.5 h-3.5" />
+                                                        {showHeader ? (language === 'zh' ? '隱藏標題' : 'Hide Header') : (language === 'zh' ? '顯示標題' : 'Show Header')}
+                                                    </button>
+                                                    <button
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        onClick={() => { setTransparentBg(!transparentBg); }}
+                                                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 hover:bg-emerald-50 text-stone-700 text-xs transition-colors"
+                                                    >
+                                                        <ImageIcon className="w-3.5 h-3.5" />
+                                                        {transparentBg ? (language === 'zh' ? '恢復背景' : 'Restore Background') : (language === 'zh' ? '透明背景' : 'Transparent Background')}
+                                                    </button>
+                                                    <button
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        onClick={() => { setTransparentBorders(!transparentBorders); }}
+                                                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 hover:bg-emerald-50 text-stone-700 text-xs transition-colors"
+                                                    >
+                                                        <Square className="w-3.5 h-3.5" />
+                                                        {transparentBorders ? (language === 'zh' ? '恢復邊框' : 'Restore Borders') : (language === 'zh' ? '透明邊框' : 'Transparent Borders')}
+                                                    </button>
+                                                    <button
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        onClick={() => {
+                                                            setLegendStyle(prev => prev === 'dots' ? 'rectangles' : prev === 'rectangles' ? 'full' : 'dots');
+                                                        }}
+                                                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 hover:bg-emerald-50 text-stone-700 text-xs transition-colors"
+                                                    >
+                                                        <LayoutGrid className="w-3.5 h-3.5" />
+                                                        {language === 'zh' ? '切換樣式' : 'Change Style'}
+                                                    </button>
+
+                                                    <div className="mx-2 my-1 border-t border-stone-100" />
+
+                                                    <button
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        onClick={(e) => { e.stopPropagation(); handleSaveSettings(); }}
+                                                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-700 font-bold text-xs transition-colors"
+                                                    >
+                                                        <Save className="w-3.5 h-3.5" />
+                                                        {language === 'zh' ? '儲存當前樣式' : 'Save Styling'}
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
                                     {!alwaysExpanded && (
                                         <button
                                             onPointerDown={(e) => e.stopPropagation()}
@@ -223,42 +396,87 @@ const MapLegend: React.FC<Props> = ({
                             </>
                         )}
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Content */}
                 <motion.div
                     initial={false}
                     animate={{ height: effectiveExpanded ? 'auto' : 0, opacity: effectiveExpanded ? 1 : 0 }}
-                    className="overflow-hidden MapLegend-content-container"
+                    className="overflow-hidden MapLegend-content-container relative z-40 rounded-b-2xl"
                 >
                     <div
-                        className="p-4 pt-0 space-y-4 overflow-y-auto custom-scrollbar"
+                        className={`p-4 pt-0 space-y-4 overflow-y-auto custom-scrollbar ${transparentBg ? 'bg-transparent' : ''}`}
                         style={{ maxHeight: customSize ? `${customSize.height - 56}px` : '60vh' }}
                         onPointerDown={(e) => isMobile && e.stopPropagation()}
                     >
-                        <div className="border-t border-stone-100 pt-3" />
+                        <div className={`border-t pt-3 ${transparentBorders || transparentBg ? 'border-transparent' : 'border-stone-100'}`} />
                         {activeLanguages.map(({ lang, dialects }) => (
                             <div key={lang} className="flex flex-col">
-                                <span className="text-[13px] font-bold text-stone-700 uppercase tracking-widest mb-2 px-1">
+                                <span
+                                    className="font-bold text-black uppercase tracking-widest mb-2 px-1"
+                                    style={{ fontSize: `${legendFontSize + 2}px` }}
+                                >
                                     {mt(lang)}
                                 </span>
-                                <div className="flex flex-col gap-1.5 pl-2">
-                                    {dialects.map((dialect) => (
-                                        <div key={dialect} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-stone-50 transition-colors">
+                                <div className="flex flex-col gap-1.5 pl-2 mb-3">
+                                    {dialects.map((dialect) => {
+                                        const color = getDialectColor(dialect);
+                                        return (
                                             <div
-                                                className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0 border border-white"
-                                                style={{ backgroundColor: getDialectColor(dialect) }}
-                                            />
-                                            <span className="text-[13px] font-bold text-stone-600 truncate leading-tight" title={mt(dialect)}>
-                                                {mt(dialect)}
-                                            </span>
-                                        </div>
-                                    ))}
+                                                key={dialect}
+                                                className={`flex items-center gap-2.5 transition-colors overflow-hidden
+                                                    ${legendStyle === 'full' ? 'px-2 py-1 rounded' : 'p-1 rounded-lg hover:bg-stone-50'}
+                                                `}
+                                                style={{
+                                                    backgroundColor: legendStyle === 'full' ? color : 'transparent',
+                                                    color: legendStyle === 'full' ? 'white' : 'black'
+                                                }}
+                                            >
+                                                {legendStyle === 'dots' && (
+                                                    <div
+                                                        className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0 border border-white"
+                                                        style={{ backgroundColor: color }}
+                                                    />
+                                                )}
+                                                {legendStyle === 'rectangles' && (
+                                                    <div
+                                                        className="w-3 h-2.5 shrink-0 border border-black/10 rounded-sm"
+                                                        style={{ backgroundColor: color }}
+                                                    />
+                                                )}
+                                                <span
+                                                    className={`font-bold truncate leading-tight flex-1`}
+                                                    style={{
+                                                        fontSize: `${legendFontSize}px`,
+                                                        textShadow: legendStyle === 'full' ? '0px 1px 2px rgba(0,0,0,0.3)' : 'none'
+                                                    }}
+                                                    title={mt(dialect)}
+                                                >
+                                                    {mt(dialect)}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </motion.div>
+
+                {/* Toast Notification */}
+                <AnimatePresence>
+                    {showToast && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.9 }}
+                            className="absolute top-[3.25rem] right-2 px-3 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-widest uppercase rounded-lg shadow-lg z-50 pointer-events-none flex items-center gap-1.5 border border-emerald-400/30"
+                        >
+                            <Save className="w-3 h-3" />
+                            {language === 'zh' ? '已儲存!' : 'Saved!'}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </AnimatePresence>
     );
