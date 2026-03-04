@@ -18,6 +18,7 @@ import MapLegend from './MapLegend';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUserStats } from '../hooks/useUserStats';
 import type { PinnedMap, PinType } from './types';
+import { mapTranslations } from '../data/map_translations';
 
 const TaiwanMap: React.FC = () => {
   const canvasRef = useRef<TaiwanMapCanvasHandle>(null);
@@ -51,6 +52,7 @@ const TaiwanMap: React.FC = () => {
     SHOW_PIN_GLOW: 'ycm_show_pin_glow',
     SHOW_DIALECT_USAGE_NAMES: 'ycm_show_dialect_usage_names',
     MAP_BG_COLOR: 'ycm_map_bg_color',
+    SEARCH_HISTORY: 'ycm_search_history',
   };
 
   const [selectedDialects, setSelectedDialects] = useState<Set<string>>(() => {
@@ -61,7 +63,11 @@ const TaiwanMap: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(() => window.innerWidth > 768);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchHistory, setSearchHistory] = useState<any[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [searchResults, setSearchResults] = useState<{ places: any[], languages: any[] }>({ places: [], languages: [] });
 
   const [showCountyBorders, setShowCountyBorders] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHOW_COUNTY_BORDERS);
@@ -262,29 +268,115 @@ const TaiwanMap: React.FC = () => {
   }, [townFeatures, getCountyTownVillageFromProps]);
 
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setSearchResults([]);
+    const rawTerm = searchTerm.trim().toLowerCase();
+    if (rawTerm === '') {
+      setSearchResults({ places: [], languages: [] });
       return;
     }
-    const term = searchTerm.trim();
-    const filtered = allTownships
-      .filter((t: any) => t.county.includes(term) || t.town.includes(term))
-      .slice(0, 10);
-    setSearchResults(filtered);
-  }, [searchTerm, allTownships]);
 
-  const handleTownshipSelect = (township: any) => {
-    const dialects = getDialects(township.county, township.town);
-    if (dialects.length) {
-      setSelectedDialects((prev) => {
-        const next = new Set(prev);
-        dialects.forEach((d) => next.add(d));
-        return next;
+    // Normalize term (remove '語' or '族' common suffixes to make search more flexible)
+    const term = rawTerm.replace(/[語族]$/, '');
+
+    // 1. Filter Places
+    const matchedPlaces = allTownships
+      .filter((t: any) => {
+        const countyEn = mapTranslations.en[t.county] || "";
+        const townEn = mapTranslations.en[t.town] || "";
+        return t.county.toLowerCase().includes(term) ||
+          t.town.toLowerCase().includes(term) ||
+          countyEn.toLowerCase().includes(term) ||
+          townEn.toLowerCase().includes(term);
+      })
+      .slice(0, 5);
+
+    // 2. Filter Languages / Dialects
+    const matchedLangsMap = new Map<string, any>();
+
+    // Check Language Groups (e.g., 阿美語)
+    Object.keys(languageGroups).forEach(lang => {
+      const langEn = mapTranslations.en[lang] || "";
+      if (lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term)) {
+        matchedLangsMap.set(lang, { type: 'language', name: lang });
+      }
+    });
+
+    // Check Dialects (e.g., 馬蘭阿美語)
+    // Also match if the parent language name matches the term
+    Object.entries(languageGroups).forEach(([lang, dialects]) => {
+      const langEn = mapTranslations.en[lang] || "";
+      const langMatched = lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term);
+
+      dialects.forEach(dialect => {
+        const dialectEn = mapTranslations.en[dialect] || "";
+        const dialectMatched = dialect.toLowerCase().includes(term) || dialectEn.toLowerCase().includes(term);
+
+        if (langMatched || dialectMatched) {
+          // Add if not already added as a language group (or if specifically seeking dialects)
+          if (!matchedLangsMap.has(dialect)) {
+            matchedLangsMap.set(dialect, { type: 'dialect', name: dialect });
+          }
+        }
       });
-      trackEvent('select_search_result', { county: township.county, town: township.town, dialects: dialects.join(',') });
+    });
+
+    setSearchResults({
+      places: matchedPlaces,
+      languages: Array.from(matchedLangsMap.values()).slice(0, 20)
+    });
+  }, [searchTerm, allTownships, languageGroups]);
+
+  const handleSearchSelect = (item: any) => {
+    // Add to History
+    setSearchHistory(prev => {
+      const filtered = prev.filter(h =>
+        (h.id && h.id === item.id) || (h.name && h.name === item.name)
+      );
+      const next = [item, ...prev.filter(h => (h.id !== item.id || !h.id) && (h.name !== item.name || !h.name))].slice(0, 10);
+      localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(next));
+      return next;
+    });
+
+    if (item.county && item.town) {
+      // It's a Place
+      const dialects = getDialects(item.county, item.town);
+      if (dialects.length) {
+        setSelectedDialects((prev) => {
+          const next = new Set(prev);
+          dialects.forEach((d) => next.add(d));
+          return next;
+        });
+      }
+      // Trigger Zoom
+      canvasRef.current?.zoomToFeature(item.county, item.town);
+
+      // Simulate Click after delay (styling is identical to map tap)
+      setTimeout(() => {
+        onClickTown(item.properties, window.innerWidth / 2, window.innerHeight / 2);
+      }, 1100);
+
+      trackEvent('select_search_place', { county: item.county, town: item.town });
+    } else if (item.type === 'language' || item.type === 'dialect') {
+      // It's a Language or Dialect - Replace selection for direct filtering
+      if (item.type === 'language') {
+        const dialects = languageGroups[item.name] || [];
+        setSelectedDialects(new Set(dialects));
+        if (!expandedGroups.has(item.name)) {
+          setExpandedGroups(prev => new Set(prev).add(item.name));
+        }
+      } else {
+        setSelectedDialects(new Set([item.name]));
+        const parentGroup = Object.entries(languageGroups).find(([_, dialects]) =>
+          dialects.includes(item.name)
+        )?.[0];
+        if (parentGroup && !expandedGroups.has(parentGroup)) {
+          setExpandedGroups(prev => new Set(prev).add(parentGroup));
+        }
+      }
+      trackEvent('select_search_language', { name: item.name, type: item.type });
     }
+
     setSearchTerm('');
-    setSearchResults([]);
+    setSearchResults({ places: [], languages: [] });
   };
 
   // --- selection helpers ---
@@ -950,8 +1042,9 @@ const TaiwanMap: React.FC = () => {
         userStats={userStats}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        searchHistory={searchHistory}
         searchResults={searchResults}
-        onSelectTownship={handleTownshipSelect}
+        onSelectSearchItem={handleSearchSelect}
         expandedGroups={expandedGroups}
         setExpandedGroups={setExpandedGroups}
         selectedDialects={selectedDialects}

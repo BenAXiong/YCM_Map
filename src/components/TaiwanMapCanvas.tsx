@@ -4,6 +4,7 @@ import { getDialectColor } from './dialectColors';
 
 export interface TaiwanMapCanvasHandle {
     resetZoom: () => void;
+    zoomToFeature: (county: string, town: string) => void;
 }
 
 type Props = {
@@ -148,6 +149,42 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
                         .call(zoomRef.current.transform as any, d3.zoomIdentity);
                 }
             },
+            zoomToFeature: (county: string, town: string) => {
+                if (!svgRef.current || !zoomRef.current || !townFeatures) return;
+
+                const feature = townFeatures.features.find((f: any) => {
+                    const p = f.properties;
+                    const { county: c, town: t } = getCountyTownVillageFromProps(p);
+                    return norm(c) === norm(county) && norm(t) === norm(town);
+                });
+
+                if (feature) {
+                    const svg = d3.select(svgRef.current);
+                    const width = svgRef.current.clientWidth || window.innerWidth;
+                    const height = svgRef.current.clientHeight || window.innerHeight;
+
+                    const projection = d3.geoMercator()
+                        .center([120.9, 23.65])
+                        .scale(height * 11)
+                        .translate([width / 2, height / 2]);
+                    const path = d3.geoPath().projection(projection);
+
+                    const [[x0, y0], [x1, y1]] = path.bounds(feature);
+                    const dx = x1 - x0;
+                    const dy = y1 - y0;
+                    const x = (x0 + x1) / 2;
+                    const y = (y0 + y1) / 2;
+                    const scale = Math.max(1, Math.min(20, 0.4 / Math.max(dx / width, dy / height))); // 0.4 for some padding
+                    const translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+                    svg.transition()
+                        .duration(1000)
+                        .call(
+                            zoomRef.current.transform as any,
+                            d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+                        );
+                }
+            }
         }));
 
         // Keep stable refs for all volatile props so D3 handlers never go stale

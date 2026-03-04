@@ -1,11 +1,13 @@
 CORE
-fix search fonction (lang vs places)
 ?optimize loading
 tabs at bottom: phrases, culture, exploration, notes, options (themes, fonts, ...)
+mmake tapped/clicked regions way more abvious
 title
 
 FEATURES
 per area user notes
+mini-games: learn the names, the words, the geography, etc
+gallery: polishing ss of each fam with legend
 
 UI
 big Rosette upper left + setting top right + other buttons?

@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft, Footprints, ListFilter } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Filter, Info, Search, X, ChevronUp, ChevronLeft, Footprints, ListFilter, MapPin, Languages } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import type { UserStats } from '../hooks/useUserStats';
+import { mapTranslations } from '../data/map_translations';
 
 type Props = {
     isMobile: boolean;
@@ -25,8 +26,9 @@ type Props = {
     // search
     searchTerm: string;
     setSearchTerm: (v: string) => void;
-    searchResults: any[];
-    onSelectTownship: (township: any) => void;
+    searchHistory: any[];
+    searchResults: { places: any[], languages: any[] };
+    onSelectSearchItem: (item: any) => void;
 
     // coloring for dialect chips
     getDialectColor: (dialect: string) => string;
@@ -50,13 +52,25 @@ const DialectFilterPanel: React.FC<Props> = ({
     onClearAll,
     searchTerm,
     setSearchTerm,
+    searchHistory,
     searchResults,
-    onSelectTownship,
+    onSelectSearchItem,
     getDialectColor,
     language,
     showUsageNames,
 }) => {
     const { t, mt } = useTranslation(language, showUsageNames);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    const historyPlaces = searchHistory.filter(h => h.county && h.town);
+    const historyLanguages = searchHistory.filter(h => h.type === 'language' || h.type === 'dialect');
+
+    const showSuggestions = (searchTerm.trim() !== '' && (searchResults.places.length > 0 || searchResults.languages.length > 0)) ||
+        (searchTerm.trim() === '' && isSearchFocused && searchHistory.length > 0);
+
+    const displayPlaces = searchTerm.trim() === '' ? historyPlaces : searchResults.places;
+    const displayLanguages = searchTerm.trim() === '' ? historyLanguages : searchResults.languages;
+    const suggestionsTitle = searchTerm.trim() === '' ? (language === 'zh' ? '最近搜尋' : 'Recent') : '';
 
     const InfoTooltip: React.FC<{ lang: string; stats: any; population: number; language: string; showUsageNames: boolean }> = ({ lang, stats, population, language, showUsageNames }) => {
         const [isHovered, setIsHovered] = useState(false);
@@ -174,27 +188,79 @@ const DialectFilterPanel: React.FC<Props> = ({
                                     placeholder={t('searchPlaceholder')}
                                     value={searchTerm}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                                    onFocus={() => setIsSearchFocused(true)}
+                                    // Blur needs a small delay to handle clicks on results
+                                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                                     className="w-full pl-11 pr-4 py-3 bg-stone-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
                                 />
 
                                 <AnimatePresence>
-                                    {searchResults.length > 0 && (
+                                    {showSuggestions && (
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
-                                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-stone-100 z-50 overflow-hidden max-h-60 overflow-y-auto"
+                                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-stone-100 z-50 overflow-hidden"
                                         >
-                                            {searchResults.map((result: any) => (
-                                                <button
-                                                    key={result.id}
-                                                    onClick={() => onSelectTownship(result)}
-                                                    className="w-full text-left px-5 py-4 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-0 flex flex-col"
-                                                >
-                                                    <span className="text-sm font-bold text-stone-900">{mt(result.town)}</span>
-                                                    <span className="text-xs text-stone-500">{mt(result.county)}</span>
-                                                </button>
-                                            ))}
+                                            {suggestionsTitle && (
+                                                <div className="px-4 py-2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-between">
+                                                    <span>{suggestionsTitle}</span>
+                                                    <Footprints className="w-3 h-3 opacity-50" />
+                                                </div>
+                                            )}
+                                            <div className="flex divide-x divide-stone-50 max-h-80">
+                                                {/* Column 1: Places */}
+                                                <div className="flex-1 overflow-y-auto">
+                                                    <div className="px-4 py-2 bg-stone-50/50 border-b border-stone-100 flex items-center gap-1.5 sticky top-0 z-10 backdrop-blur-sm">
+                                                        <MapPin className="w-3 h-3 text-stone-400" />
+                                                        <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('places')}</span>
+                                                    </div>
+                                                    {displayPlaces.length > 0 ? (
+                                                        displayPlaces.map((result: any, idx) => (
+                                                            <button
+                                                                key={`place-${result.id || idx}`}
+                                                                onClick={() => onSelectSearchItem(result)}
+                                                                className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors border-b border-stone-50 last:border-0 flex flex-col group"
+                                                            >
+                                                                <span className="text-sm font-bold text-stone-900 group-hover:text-emerald-700">{mt(result.town)}</span>
+                                                                <span className="text-[10px] text-stone-500">{mt(result.county)}</span>
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="px-4 py-6 text-center text-stone-300 italic text-[10px]">
+                                                            {language === 'zh' ? '無相符地方' : 'No places'}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Column 2: Languages */}
+                                                <div className="flex-1 overflow-y-auto">
+                                                    <div className="px-4 py-2 bg-stone-50/50 border-b border-stone-100 flex items-center gap-1.5 sticky top-0 z-10 backdrop-blur-sm">
+                                                        <Languages className="w-3 h-3 text-stone-400" />
+                                                        <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('languages')}</span>
+                                                    </div>
+                                                    {displayLanguages.length > 0 ? (
+                                                        displayLanguages.map((result: any, idx) => (
+                                                            <button
+                                                                key={`lang-${idx}`}
+                                                                onClick={() => onSelectSearchItem(result)}
+                                                                className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors border-b border-stone-50 last:border-0 flex flex-col group"
+                                                            >
+                                                                <span className="text-sm font-bold text-stone-900 group-hover:text-emerald-700">{result.name}</span>
+                                                                {mapTranslations.en[result.name] && (
+                                                                    <span className="text-[10px] text-stone-500 uppercase font-black tracking-tighter">
+                                                                        {mapTranslations.en[result.name]}
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="px-4 py-6 text-center text-stone-300 italic text-[10px]">
+                                                            {language === 'zh' ? '無相符語言' : 'No languages'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
