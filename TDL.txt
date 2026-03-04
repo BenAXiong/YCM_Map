@@ -1,6 +1,5 @@
 CORE
 ?optimize loading
-make tapped/clicked regions way more abvious
 tabs at bottom: phrases, culture, exploration, notes, options (themes, fonts, ...)
 title
 
@@ -10,11 +9,17 @@ mini-games: learn the names, the words, the geography, etc
 gallery: polishing ss of each fam with legend
 MODE tab: YCM vs other themes?
 
+UX
+clicks only highlight a single area, click and drag to highlight mutliple
+add button in toolip to highlight all shared-lang/dia areas
+    or use the pills for that
+
 UI
 big Rosette upper left + setting top right + other buttons?
 imporve overlap styling
 filters: try eyes icons instead of checkboxes
 better glow
+better pins
 add settings icons
 enable single area coloring vs shared dialects vs shared language
 add "about" overlay

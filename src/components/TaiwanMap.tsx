@@ -349,9 +349,16 @@ const TaiwanMap: React.FC = () => {
       // Trigger Zoom
       canvasRef.current?.zoomToFeature(item.county, item.town);
 
-      // Simulate Click after delay (styling is identical to map tap)
+      // Simulate Selection after delay
       setTimeout(() => {
-        onClickTown(item.properties, window.innerWidth / 2, window.innerHeight / 2);
+        setHoveredTown(item.properties);
+        if (isMobile) {
+          setTooltipPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        } else {
+          setIsDetailPinned(true);
+          setShowDetailPanel(false);
+        }
+        if (dialects.length > 0) setSelectedDetailDialect(dialects[0]);
       }, 1100);
 
       trackEvent('select_search_place', { county: item.county, town: item.town });
@@ -653,7 +660,9 @@ const TaiwanMap: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className={isMobile && !isTitleExpanded ? '' : 'p-2 rounded-xl'}>
                   {/* <MapIcon className={isMobile && !isTitleExpanded ? "w-8 h-8 text-emerald-600 drop-shadow-md" : "w-5 h-5 md:w-6 md:h-6 text-emerald-600"} /> */}
-                  <div
+                  <motion.div
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
                     className={
                       isMobile && !isTitleExpanded
                         ? ""
@@ -669,7 +678,7 @@ const TaiwanMap: React.FC = () => {
                           : "w-full h-full object-contain" // fill container on desktop
                       }
                     />
-                  </div>
+                  </motion.div>
                 </div>
                 {(!isMobile || isTitleExpanded) && (
                   <motion.div

@@ -232,10 +232,10 @@ const MapLegend: React.FC<Props> = ({
                 <motion.div
                     initial={false}
                     animate={{
-                        height: (isMobile || showHeader || isHovered) ? 'auto' : 0,
-                        opacity: (isMobile || showHeader || isHovered) ? 1 : 0
+                        height: (!effectiveExpanded || isMobile || showHeader || isHovered) ? 'auto' : 0,
+                        opacity: (!effectiveExpanded || isMobile || showHeader || isHovered) ? 1 : 0
                     }}
-                    className={`flex flex-col shrink-0 ${(isMobile || showHeader || isHovered) ? 'overflow-visible relative z-50' : 'overflow-hidden'}`}
+                    className={`flex flex-col shrink-0 ${(!effectiveExpanded || isMobile || showHeader || isHovered) ? 'overflow-visible relative z-50' : 'overflow-hidden'}`}
                 >
                     <div
                         onClick={(e) => {
