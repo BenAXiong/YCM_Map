@@ -238,8 +238,8 @@ const TaiwanMap: React.FC = () => {
   };
 
   const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error } = useTaiwanTopo(
-    'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
-    (showVillageBorders || showVillageColors) ? 'https://cdn.jsdelivr.net/npm/taiwan-atlas/villages-10t.json' : undefined
+    '/towns-10t.json',
+    (showVillageBorders || showVillageColors) ? '/villages-10t.json' : undefined
   );
   const {
     languageGroups,

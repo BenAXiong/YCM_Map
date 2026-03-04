@@ -1,5 +1,5 @@
 CORE
-?optimize loading
+branching and deploying?
 tabs at bottom: phrases, culture, exploration, notes, options (themes, fonts, ...)
 title
 

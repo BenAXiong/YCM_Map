@@ -191,18 +191,21 @@ const MapSettingsMenu: React.FC<Props> = ({
                                         value={showPins}
                                         onToggle={() => setShowPins(!showPins)}
                                         disabled={!showVillageColors}
+                                        tooltip={!showVillageColors ? t('activateVillageMode') : undefined}
                                     />
                                     <ToggleRow
                                         label={t('showPinContours')}
                                         value={showPinContours}
                                         onToggle={() => setShowPinContours(!showPinContours)}
                                         disabled={!showVillageColors}
+                                        tooltip={!showVillageColors ? t('activateVillageMode') : undefined}
                                     />
                                     <ToggleRow
                                         label={t('showPinGlow')}
                                         value={showPinGlow}
                                         onToggle={() => setShowPinGlow(!showPinGlow)}
                                         disabled={!showVillageColors}
+                                        tooltip={!showVillageColors ? t('activateVillageMode') : undefined}
                                     />
                                 </div>
                             </CollapsibleSection>
@@ -269,7 +272,7 @@ const MapSettingsMenu: React.FC<Props> = ({
 
                             <div className="mt-4 pt-2 border-t border-stone-100 flex justify-between items-center opacity-30 select-none px-1">
                                 <span className="text-[9px] font-black tracking-tighter text-stone-400">BUILD VER</span>
-                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.04.1411</span>
+                                <span className="text-[9px] font-mono font-bold text-stone-500">2026.03.04.1438</span>
                             </div>
                         </div>
                     </motion.div>
@@ -279,27 +282,38 @@ const MapSettingsMenu: React.FC<Props> = ({
     );
 };
 
-const ToggleRow: React.FC<{ label: string; sublabel?: string; value: boolean; onToggle: () => void; disabled?: boolean }> = ({
+const ToggleRow: React.FC<{
+    label: string;
+    sublabel?: string;
+    value: boolean;
+    onToggle: () => void;
+    disabled?: boolean;
+    tooltip?: string;
+}> = ({
     label,
     sublabel,
     value,
     onToggle,
-    disabled
+    disabled,
+    tooltip
 }) => (
-    <div className={`flex items-center justify-between ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-        <div className="flex flex-col">
-            <span className="text-sm text-stone-700 font-bold">{label}</span>
-            {sublabel && <span className="text-[10px] text-stone-400">{sublabel}</span>}
-        </div>
-        <button
-            onClick={onToggle}
-            disabled={disabled}
-            className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${value ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-stone-200'} ${disabled ? 'cursor-not-allowed' : ''}`}
+        <div
+            className={`flex items-center justify-between ${disabled ? 'opacity-50' : ''}`}
+            title={tooltip}
         >
-            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${value ? 'left-5' : 'left-1'}`} />
-        </button>
-    </div>
-);
+            <div className="flex flex-col">
+                <span className="text-sm text-stone-700 font-bold">{label}</span>
+                {sublabel && <span className="text-[10px] text-stone-400">{sublabel}</span>}
+            </div>
+            <button
+                onClick={onToggle}
+                disabled={disabled}
+                className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${value ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-stone-200'} ${disabled ? 'cursor-not-allowed pointer-events-none' : ''}`}
+            >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${value ? 'left-5' : 'left-1'}`} />
+            </button>
+        </div>
+    );
 
 const ColorRow: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({
     label,

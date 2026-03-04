@@ -45,6 +45,7 @@ export const uiTranslations = {
         showPinGlow: '踩點區域光暈',
         languageSelect: '語言 / Language',
         uiOptions: '介面設定',
+        activateVillageMode: '請先開啟村里模式',
 
         // Filter Panel
         filterLanguages: '族語篩選',
@@ -105,6 +106,7 @@ export const uiTranslations = {
         showPinGlow: 'Pin area glow',
         languageSelect: 'Language / 語言',
         uiOptions: 'UI Options',
+        activateVillageMode: 'Activate Village Mode First',
 
         // Filter Panel
         filterLanguages: 'Language Filter',
