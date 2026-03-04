@@ -36,6 +36,59 @@ type Props = {
     showUsageNames: boolean;
 };
 
+const InfoTooltip: React.FC<{ lang: string; stats: any; population: number; language: string; showUsageNames: boolean }> = ({ lang, stats, population, language, showUsageNames }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const iconRef = useRef<HTMLDivElement>(null);
+
+    const { mt: mtLocal } = useTranslation(language as any, showUsageNames);
+
+    const getPortalPosition = () => {
+        if (!iconRef.current) return { top: 0, left: 0 };
+        const rect = iconRef.current.getBoundingClientRect();
+        return {
+            top: rect.top - 8, // Standard padding
+            left: rect.left + (rect.width / 2)
+        };
+    };
+
+    const pos = getPortalPosition();
+
+    return (
+        <div
+            ref={iconRef}
+            className="relative flex items-center justify-center p-1"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            <Info className="w-4 h-4 text-stone-300 hover:text-emerald-500 transition-colors" />
+            {isHovered && createPortal(
+                <div
+                    className="fixed z-[9999] -translate-x-1/2 -translate-y-full pointer-events-none"
+                    style={{ top: pos.top, left: pos.left }}
+                >
+                    <div className="bg-stone-900 text-white text-[10px] px-3 py-2 rounded-xl shadow-2xl flex flex-col gap-1 border border-white/10 whitespace-nowrap mb-2">
+                        <div className="flex justify-between gap-4 font-bold">
+                            <span className="opacity-60">{language === 'zh' ? '人口' : 'Population'}</span>
+                            <span>{population?.toLocaleString() || '---'} 人</span>
+                        </div>
+                        <div className="text-[10px] text-emerald-400 font-bold border-b border-white/5 mb-1 pb-1">
+                            {mtLocal(lang)}
+                        </div>
+                        {stats?.total > 0 && (
+                            <div className="flex justify-between gap-4 font-bold border-t border-white/10 pt-1 mt-0.5 text-emerald-400">
+                                <span className="opacity-80">📍 {language === 'zh' ? '探索進度' : 'Exploration'}</span>
+                                <span>{stats.pinned} / {stats.total}</span>
+                            </div>
+                        )}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-900" />
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
 const DialectFilterPanel: React.FC<Props> = ({
     isMobile,
     isOpen,
@@ -72,58 +125,6 @@ const DialectFilterPanel: React.FC<Props> = ({
     const displayLanguages = searchTerm.trim() === '' ? historyLanguages : searchResults.languages;
     const suggestionsTitle = searchTerm.trim() === '' ? (language === 'zh' ? '最近搜尋' : 'Recent') : '';
 
-    const InfoTooltip: React.FC<{ lang: string; stats: any; population: number; language: string; showUsageNames: boolean }> = ({ lang, stats, population, language, showUsageNames }) => {
-        const [isHovered, setIsHovered] = useState(false);
-        const iconRef = useRef<HTMLDivElement>(null);
-
-        const { mt: mtLocal } = useTranslation(language as any, showUsageNames);
-
-        const getPortalPosition = () => {
-            if (!iconRef.current) return { top: 0, left: 0 };
-            const rect = iconRef.current.getBoundingClientRect();
-            return {
-                top: rect.top - 8, // Standard padding
-                left: rect.left + (rect.width / 2)
-            };
-        };
-
-        const pos = getPortalPosition();
-
-        return (
-            <div
-                ref={iconRef}
-                className="relative flex items-center justify-center p-1"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                <Info className="w-4 h-4 text-stone-300 hover:text-emerald-500 transition-colors" />
-                {isHovered && createPortal(
-                    <div
-                        className="fixed z-[9999] -translate-x-1/2 -translate-y-full pointer-events-none"
-                        style={{ top: pos.top, left: pos.left }}
-                    >
-                        <div className="bg-stone-900 text-white text-[10px] px-3 py-2 rounded-xl shadow-2xl flex flex-col gap-1 border border-white/10 whitespace-nowrap mb-2">
-                            <div className="flex justify-between gap-4 font-bold">
-                                <span className="opacity-60">{language === 'zh' ? '人口' : 'Population'}</span>
-                                <span>{population?.toLocaleString() || '---'} 人</span>
-                            </div>
-                            <div className="text-[10px] text-emerald-400 font-bold border-b border-white/5 mb-1 pb-1">
-                                {mtLocal(lang)}
-                            </div>
-                            {stats?.total > 0 && (
-                                <div className="flex justify-between gap-4 font-bold border-t border-white/10 pt-1 mt-0.5 text-emerald-400">
-                                    <span className="opacity-80">📍 {language === 'zh' ? '探索進度' : 'Exploration'}</span>
-                                    <span>{stats.pinned} / {stats.total}</span>
-                                </div>
-                            )}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-900" />
-                        </div>
-                    </div>,
-                    document.body
-                )}
-            </div>
-        );
-    };
     const toggleGroup = (lang: string) => {
         setExpandedGroups((prev) => {
             const next = new Set(prev);
@@ -454,4 +455,4 @@ const DialectFilterPanel: React.FC<Props> = ({
     );
 };
 
-export default DialectFilterPanel;
+export default React.memo(DialectFilterPanel);

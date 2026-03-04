@@ -96,7 +96,7 @@ const generateAreaFill = (
     return `url(#${gradId})`;
 };
 
-const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
+const TaiwanMapCanvas = React.memo(React.forwardRef<TaiwanMapCanvasHandle, Props>(
     (
         {
             townFeatures,
@@ -683,7 +683,7 @@ const TaiwanMapCanvas = React.forwardRef<TaiwanMapCanvasHandle, Props>(
 
         return <svg ref={svgRef} className="w-full h-full" style={{ backgroundColor: mapBgColor }} />;
     }
-);
+));
 
 TaiwanMapCanvas.displayName = 'TaiwanMapCanvas';
 export default TaiwanMapCanvas;

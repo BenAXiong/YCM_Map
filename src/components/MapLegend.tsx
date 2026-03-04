@@ -406,7 +406,7 @@ const MapLegend: React.FC<Props> = ({
                 >
                     <div
                         className={`p-4 pt-0 space-y-4 overflow-y-auto custom-scrollbar ${transparentBg ? 'bg-transparent' : ''}`}
-                        style={{ maxHeight: customSize ? `${customSize.height - 56}px` : '60vh' }}
+                        style={{ maxHeight: customSize ? `${customSize.height - 56}px` : '80vh' }}
                         onPointerDown={(e) => isMobile && e.stopPropagation()}
                     >
                         <div className={`border-t pt-3 ${transparentBorders || transparentBg ? 'border-transparent' : 'border-stone-100'}`} />

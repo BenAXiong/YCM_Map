@@ -49,9 +49,24 @@ const getEntries = (county: string, town: string): DialectEntry[] => {
     return data.areaIndex?.[c]?.[t] ?? [];
 };
 
+// Pre-computed flat map: 'county|town' -> unique dialects[]
+// Computed once at module load from the static JSON import — O(1) per lookup.
+const dialectsByTown = new Map<string, string[]>();
+if (data.areaIndex) {
+    for (const [county, towns] of Object.entries(data.areaIndex)) {
+        for (const [town, entries] of Object.entries(towns as Record<string, DialectEntry[]>)) {
+            const key = `${county}|${town}`;
+            const dialects = Array.from(new Set((entries as DialectEntry[]).map(e => e.方言別)));
+            dialectsByTown.set(key, dialects);
+        }
+    }
+}
+
 const getDialects = (county: string, town: string): string[] => {
-    const entries = getEntries(county, town);
-    return Array.from(new Set(entries.map((e) => e.方言別)));
+    const c = norm(county);
+    const t = normTown(town);
+    // Fast O(1) path via pre-computed map
+    return dialectsByTown.get(`${c}|${t}`) ?? [];
 };
 
 const getVillageDialects = (county: string, town: string, village: string): string[] => {
@@ -147,6 +162,7 @@ export function useDialectData() {
         getEntries,
         getDialects,
         getVillageDialects,
+        dialectsByTown,
 
         // filter helpers
         languageGroups,

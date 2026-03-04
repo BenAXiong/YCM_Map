@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as topojson from 'topojson-client';
 
 type UseTaiwanTopoResult = {
@@ -6,7 +6,8 @@ type UseTaiwanTopoResult = {
     countyBorders: any | null;
     villageBorders: any | null;
     villageFeatures: any | null;
-    loading: boolean;
+    loading: boolean;        // true only during initial township load
+    villageLoading: boolean; // true during village data fetch
     error: string | null;
 };
 
@@ -18,20 +19,21 @@ export function useTaiwanTopo(
     const [countyBorders, setCountyBorders] = useState<any | null>(null);
     const [villageBorders, setVillageBorders] = useState<any | null>(null);
     const [villageFeatures, setVillageFeatures] = useState<any | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [townsLoading, setTownsLoading] = useState<boolean>(true);
+    const [villageLoading, setVillageLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
+    const villageFetchedRef = useRef<string | null>(null);
+
+    // Effect 1: Township Load (Run once or when url changes)
     useEffect(() => {
         let cancelled = false;
-
-        async function run() {
+        async function loadTowns() {
             try {
-                setLoading(true);
+                setTownsLoading(true);
                 setError(null);
-
-                // 1. Fetch towns
                 const res = await fetch(url);
-                if (!res.ok) throw new Error(`Failed to fetch topojson: ${res.status} ${res.statusText}`);
+                if (!res.ok) throw new Error(`Failed to fetch towns: ${res.status}`);
                 const topo = await res.json();
                 if (cancelled) return;
 
@@ -43,33 +45,53 @@ export function useTaiwanTopo(
                     const bCounty = b.properties?.COUNTYNAME || b.properties?.countyName || b.properties?.C_Name;
                     return aCounty !== bCounty;
                 }));
-
-                // 2. Fetch villages if requested
-                if (villageUrl) {
-                    const vRes = await fetch(villageUrl);
-                    if (vRes.ok) {
-                        const vTopo = await vRes.json();
-                        if (!cancelled) {
-                            const vObjName = Object.keys(vTopo.objects)[0];
-                            const vObj = vTopo.objects[vObjName];
-
-                            setVillageFeatures(topojson.feature(vTopo, vObj as any));
-                            setVillageBorders(topojson.mesh(vTopo, vObj as any));
-                        }
-                    }
-                }
             } catch (e: any) {
                 if (!cancelled) setError(e?.message ?? String(e));
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!cancelled) setTownsLoading(false);
             }
         }
+        loadTowns();
+        return () => { cancelled = true; };
+    }, [url]);
 
-        run();
-        return () => {
-            cancelled = true;
-        };
-    }, [url, villageUrl]);
+    // Effect 2: Village Load (Lazy)
+    useEffect(() => {
+        if (!villageUrl || villageFetchedRef.current === villageUrl) return;
 
-    return { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error };
+        let cancelled = false;
+        async function loadVillages() {
+            try {
+                setVillageLoading(true);
+                const res = await fetch(villageUrl!);
+                if (!res.ok) throw new Error(`Failed to fetch villages: ${res.status}`);
+                const vTopo = await res.json();
+                if (cancelled) return;
+
+                const vObjName = Object.keys(vTopo.objects)[0];
+                const vObj = vTopo.objects[vObjName];
+
+                setVillageFeatures(topojson.feature(vTopo, vObj as any));
+                setVillageBorders(topojson.mesh(vTopo, vObj as any));
+                villageFetchedRef.current = villageUrl!;
+            } catch (e: any) {
+                console.error("Village Load Error:", e);
+                // We don't set the main error state for village failures to avoid blocking the whole app
+            } finally {
+                if (!cancelled) setVillageLoading(false);
+            }
+        }
+        loadVillages();
+        return () => { cancelled = true; };
+    }, [villageUrl]);
+
+    return {
+        townFeatures,
+        countyBorders,
+        villageBorders,
+        villageFeatures,
+        loading: townsLoading,
+        villageLoading,
+        error
+    };
 }

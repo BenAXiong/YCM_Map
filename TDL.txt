@@ -20,6 +20,7 @@ imporve overlap styling
 filters: try eyes icons instead of checkboxes
 better glow
 better pins
+cool area upheaval effect (float up 3D)
 add settings icons
 enable single area coloring vs shared dialects vs shared language
 add "about" overlay

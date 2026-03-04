@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { trackEvent } from '../hooks/useAnalytics';
 import { Map as MapIcon, RotateCcw, ImageDown, Share2, Loader2, Smartphone, Layout } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -158,68 +158,34 @@ const TaiwanMap: React.FC = () => {
   }, [selectedDialects, STORAGE_KEYS.SELECTED_DIALECTS]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_COUNTY_BORDERS, JSON.stringify(showCountyBorders));
-  }, [showCountyBorders]);
+    const settingsMap = {
+      [STORAGE_KEYS.SHOW_COUNTY_BORDERS]: showCountyBorders,
+      [STORAGE_KEYS.SHOW_TOWNSHIP_CONTOURS]: showTownshipContours,
+      [STORAGE_KEYS.SHOW_VILLAGE_BORDERS]: showVillageBorders,
+      [STORAGE_KEYS.SHOW_VILLAGE_COLORS]: showVillageColors,
+      [STORAGE_KEYS.SHOW_DIALECT_USAGE_NAMES]: showDialectUsageNames,
+      [STORAGE_KEYS.MAP_BG_COLOR]: mapBgColor,
+      [STORAGE_KEYS.SHOW_FIXED_INFO]: showFixedInfo,
+      [STORAGE_KEYS.SHOW_LVL1_NAMES]: showLvl1Names,
+      [STORAGE_KEYS.SHOW_LVL2_NAMES]: showLvl2Names,
+      [STORAGE_KEYS.SHOW_LVL3_NAMES]: showLvl3Names,
+      [STORAGE_KEYS.LANGUAGE]: language,
+      [STORAGE_KEYS.PINNED_LOCATIONS]: pinnedLocations,
+      [STORAGE_KEYS.SHOW_PINS]: showPins,
+      [STORAGE_KEYS.SHOW_PIN_CONTOURS]: showPinContours,
+      [STORAGE_KEYS.SHOW_PIN_GLOW]: showPinGlow,
+      [STORAGE_KEYS.SHOW_SHARED_DIALECTS]: showSharedDialects,
+    };
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_TOWNSHIP_CONTOURS, JSON.stringify(showTownshipContours));
-  }, [showTownshipContours]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_BORDERS, JSON.stringify(showVillageBorders));
-  }, [showVillageBorders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_DIALECT_USAGE_NAMES, JSON.stringify(showDialectUsageNames));
-  }, [showDialectUsageNames]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_VILLAGE_COLORS, JSON.stringify(showVillageColors));
-  }, [showVillageColors]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MAP_BG_COLOR, mapBgColor);
-  }, [mapBgColor]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_FIXED_INFO, JSON.stringify(showFixedInfo));
-  }, [showFixedInfo, STORAGE_KEYS.SHOW_FIXED_INFO]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_LVL1_NAMES, JSON.stringify(showLvl1Names));
-  }, [showLvl1Names, STORAGE_KEYS.SHOW_LVL1_NAMES]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_LVL2_NAMES, JSON.stringify(showLvl2Names));
-  }, [showLvl2Names, STORAGE_KEYS.SHOW_LVL2_NAMES]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_LVL3_NAMES, JSON.stringify(showLvl3Names));
-  }, [showLvl3Names, STORAGE_KEYS.SHOW_LVL3_NAMES]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
-  }, [language]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PINNED_LOCATIONS, JSON.stringify(pinnedLocations));
-  }, [pinnedLocations]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_PINS, JSON.stringify(showPins));
-  }, [showPins]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_PIN_CONTOURS, JSON.stringify(showPinContours));
-  }, [showPinContours]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_PIN_GLOW, JSON.stringify(showPinGlow));
-  }, [showPinGlow]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOW_SHARED_DIALECTS, JSON.stringify(showSharedDialects));
-  }, [showSharedDialects, STORAGE_KEYS.SHOW_SHARED_DIALECTS]);
+    Object.entries(settingsMap).forEach(([key, val]) => {
+      localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+    });
+  }, [
+    showCountyBorders, showTownshipContours, showVillageBorders, showVillageColors,
+    showDialectUsageNames, mapBgColor, showFixedInfo, showLvl1Names, showLvl2Names,
+    showLvl3Names, language, pinnedLocations, showPins, showPinContours,
+    showPinGlow, showSharedDialects
+  ]);
 
   // --- Handlers ---
   const handleTogglePin = (county: string, town: string, village: string, type: PinType | null) => {
@@ -237,7 +203,7 @@ const TaiwanMap: React.FC = () => {
     });
   };
 
-  const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, error } = useTaiwanTopo(
+  const { townFeatures, countyBorders, villageBorders, villageFeatures, loading, villageLoading, error } = useTaiwanTopo(
     '/towns-10t.json',
     (showVillageBorders || showVillageColors) ? '/villages-10t.json' : undefined
   );
@@ -268,61 +234,65 @@ const TaiwanMap: React.FC = () => {
   }, [townFeatures, getCountyTownVillageFromProps]);
 
   useEffect(() => {
-    const rawTerm = searchTerm.trim().toLowerCase();
-    if (rawTerm === '') {
-      setSearchResults({ places: [], languages: [] });
-      return;
-    }
-
-    // Normalize term (remove '語' or '族' common suffixes to make search more flexible)
-    const term = rawTerm.replace(/[語族]$/, '');
-
-    // 1. Filter Places
-    const matchedPlaces = allTownships
-      .filter((t: any) => {
-        const countyEn = mapTranslations.en[t.county] || "";
-        const townEn = mapTranslations.en[t.town] || "";
-        return t.county.toLowerCase().includes(term) ||
-          t.town.toLowerCase().includes(term) ||
-          countyEn.toLowerCase().includes(term) ||
-          townEn.toLowerCase().includes(term);
-      })
-      .slice(0, 5);
-
-    // 2. Filter Languages / Dialects
-    const matchedLangsMap = new Map<string, any>();
-
-    // Check Language Groups (e.g., 阿美語)
-    Object.keys(languageGroups).forEach(lang => {
-      const langEn = mapTranslations.en[lang] || "";
-      if (lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term)) {
-        matchedLangsMap.set(lang, { type: 'language', name: lang });
+    // Debounce: wait 150ms after the last keystroke before running the search
+    const timer = setTimeout(() => {
+      const rawTerm = searchTerm.trim().toLowerCase();
+      if (rawTerm === '') {
+        setSearchResults({ places: [], languages: [] });
+        return;
       }
-    });
 
-    // Check Dialects (e.g., 馬蘭阿美語)
-    // Also match if the parent language name matches the term
-    Object.entries(languageGroups).forEach(([lang, dialects]) => {
-      const langEn = mapTranslations.en[lang] || "";
-      const langMatched = lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term);
+      // Normalize term (remove '語' or '族' common suffixes to make search more flexible)
+      const term = rawTerm.replace(/[語族]$/, '');
 
-      dialects.forEach(dialect => {
-        const dialectEn = mapTranslations.en[dialect] || "";
-        const dialectMatched = dialect.toLowerCase().includes(term) || dialectEn.toLowerCase().includes(term);
+      // 1. Filter Places
+      const matchedPlaces = allTownships
+        .filter((t: any) => {
+          const countyEn = mapTranslations.en[t.county] || "";
+          const townEn = mapTranslations.en[t.town] || "";
+          return t.county.toLowerCase().includes(term) ||
+            t.town.toLowerCase().includes(term) ||
+            countyEn.toLowerCase().includes(term) ||
+            townEn.toLowerCase().includes(term);
+        })
+        .slice(0, 5);
 
-        if (langMatched || dialectMatched) {
-          // Add if not already added as a language group (or if specifically seeking dialects)
-          if (!matchedLangsMap.has(dialect)) {
-            matchedLangsMap.set(dialect, { type: 'dialect', name: dialect });
-          }
+      // 2. Filter Languages / Dialects
+      const matchedLangsMap = new Map<string, any>();
+
+      // Check Language Groups (e.g., 阿美語)
+      Object.keys(languageGroups).forEach(lang => {
+        const langEn = mapTranslations.en[lang] || "";
+        if (lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term)) {
+          matchedLangsMap.set(lang, { type: 'language', name: lang });
         }
       });
-    });
 
-    setSearchResults({
-      places: matchedPlaces,
-      languages: Array.from(matchedLangsMap.values()).slice(0, 20)
-    });
+      // Check Dialects (e.g., 馬蘭阿美語)
+      // Also match if the parent language name matches the term
+      Object.entries(languageGroups).forEach(([lang, dialects]) => {
+        const langEn = mapTranslations.en[lang] || "";
+        const langMatched = lang.toLowerCase().includes(term) || langEn.toLowerCase().includes(term);
+
+        dialects.forEach(dialect => {
+          const dialectEn = mapTranslations.en[dialect] || "";
+          const dialectMatched = dialect.toLowerCase().includes(term) || dialectEn.toLowerCase().includes(term);
+
+          if (langMatched || dialectMatched) {
+            if (!matchedLangsMap.has(dialect)) {
+              matchedLangsMap.set(dialect, { type: 'dialect', name: dialect });
+            }
+          }
+        });
+      });
+
+      setSearchResults({
+        places: matchedPlaces,
+        languages: Array.from(matchedLangsMap.values()).slice(0, 20)
+      });
+    }, 150);
+
+    return () => clearTimeout(timer);
   }, [searchTerm, allTownships, languageGroups]);
 
   const handleSearchSelect = (item: any) => {
@@ -385,6 +355,9 @@ const TaiwanMap: React.FC = () => {
     setSearchTerm('');
     setSearchResults({ places: [], languages: [] });
   };
+
+  // 30ms debounce for hover updates to batch high-level state changes
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- selection helpers ---
   const toggleLanguage = (lang: string) => {
@@ -535,29 +508,42 @@ const TaiwanMap: React.FC = () => {
   }, [hoveredTown, hoveredDialects, selectedDetailDialect]);
 
   // --- Map Interaction Handlers ---
-  const handleHover = (props: any, x: number, y: number) => {
+  const handleHover = useCallback((props: any, x: number, y: number) => {
     if (isMobile) return; // Mobile uses onClick for tooltip
-    if (!isDetailPinned) {
-      setHoveredTown(props);
-    }
-    setTooltipPos({ x, y });
-  };
 
-  const handleLeave = () => {
+    // Always update tooltip position immediately for snappiness
+    setTooltipPos({ x, y });
+
+    if (!isDetailPinned) {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+
+      // Debounce the high-level state change (which triggers heavy logic like dialect highlights)
+      hoverTimerRef.current = setTimeout(() => {
+        setHoveredTown(props);
+      }, 30);
+    }
+  }, [isMobile, isDetailPinned]);
+
+  const handleLeave = useCallback(() => {
     if (isMobile) return;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+
     if (!isDetailPinned) {
       setHoveredTown(null);
       setSelectedDetailDialect(null);
     }
-  };
+  }, [isMobile, isDetailPinned]);
 
-  const handleCloseTooltip = () => {
+  const handleCloseTooltip = useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setIsDetailPinned(false);
     setHoveredTown(null);
     setSelectedDetailDialect(null);
-  };
+  }, []);
 
-  const onClickTown = (props: any, x: number, y: number) => {
+  const onClickTown = useCallback((props: any, x: number, y: number) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+
     if (!props) {
       setIsDetailPinned(false);
       setHoveredTown(null);
@@ -640,7 +626,7 @@ const TaiwanMap: React.FC = () => {
       const { county, town } = getCountyTownVillageFromProps(props);
       trackEvent('click_area', { county, town, dialects: dialectsArray.join(',') });
     }
-  };
+  }, [isMobile, showVillageColors, getCountyTownVillageFromProps, getVillageDialects, getDialects, selectedDialects]);
 
   return (
     <div
@@ -693,17 +679,24 @@ const TaiwanMap: React.FC = () => {
                   </motion.div>
                 )}
               </div>
-              {isTitleExpanded && isMobile && (loading || error) && (
+              {isTitleExpanded && isMobile && (loading || villageLoading || error) && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   className="mt-3 pt-3 border-t border-stone-100"
                 >
                   {loading && <p className="text-[10px] text-stone-400">{t('loadingData')}</p>}
+                  {villageLoading && <p className="text-[10px] text-emerald-600 flex items-center gap-1"><Loader2 className="w-2 h-2 animate-spin" /> {t('loadingData')} (Village Mode)...</p>}
                   {error && <p className="text-[10px] text-red-500">{error}</p>}
                 </motion.div>
               )}
               {(!isMobile && loading) && <p className="text-xs text-stone-400 mt-2">{t('loadingData')}</p>}
+              {(!isMobile && villageLoading) && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('loadingData')} (Village Mode)</span>
+                </div>
+              )}
               {(!isMobile && error) && <p className="text-xs text-red-500 mt-2">{error}</p>}
             </motion.div>
 
