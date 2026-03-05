@@ -1,13 +1,14 @@
 CORE
-branching and deploying?
-tabs at bottom: phrases, culture, exploration, notes, options (themes, fonts, ...)
+mobile tabs: phrases, culture, exploration, notes, options (themes, fonts, ...)
+dsk tabs?
+plan: connect YCM (login, share, games)
+picmin plan (only badges)
 title
 
 FEATURES
 per area user notes
 mini-games: learn the names, the words, the geography, etc
 gallery: polishing ss of each fam with legend
-MODE tab: YCM vs other themes?
 
 UX
 clicks only highlight a single area, click and drag to highlight mutliple
@@ -37,6 +38,7 @@ EXTRA
 	add images, audio, SL text and translations
 population data of each division (yes, even li/cun if possible)
 complete areas names en, seems limited to non-grey areas (and lvl3...)
+?MODE tab (extend whole app focus): YCM vs other themes
 
 OAUTH
     my map + sharable gallery of pics vs locations and pins 
